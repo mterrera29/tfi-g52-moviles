@@ -1,0 +1,68 @@
+import type { Horario } from '@/tipos/horario';
+
+export const horariosMock: Horario[] = [
+  {
+    id: 'hor-1001',
+    lineaId: 'lin-05',
+    paradaId: 'par-101',
+    sentido: 'ida',
+    tipoDeDia: 'habil',
+    hora: '10:42',
+  },
+  {
+    id: 'hor-1002',
+    lineaId: 'lin-05',
+    paradaId: 'par-101',
+    sentido: 'ida',
+    tipoDeDia: 'habil',
+    hora: '11:02',
+  },
+  {
+    id: 'hor-1003',
+    lineaId: 'lin-05',
+    paradaId: 'par-101',
+    sentido: 'ida',
+    tipoDeDia: 'habil',
+    hora: '11:22',
+  },
+  {
+    id: 'hor-1004',
+    lineaId: 'lin-14',
+    paradaId: 'par-101',
+    sentido: 'ida',
+    tipoDeDia: 'habil',
+    hora: '10:51',
+  },
+  {
+    id: 'hor-1005',
+    lineaId: 'lin-14',
+    paradaId: 'par-101',
+    sentido: 'ida',
+    tipoDeDia: 'habil',
+    hora: '11:21',
+  },
+  {
+    id: 'hor-1006',
+    lineaId: 'lin-14',
+    paradaId: 'par-101',
+    sentido: 'ida',
+    tipoDeDia: 'habil',
+    hora: '11:51',
+  },
+  {
+    id: 'hor-2001',
+    lineaId: 'lin-14',
+    paradaId: 'par-201',
+    sentido: 'ida',
+    tipoDeDia: 'habil',
+    hora: '09:15',
+  },
+  {
+    id: 'hor-2002',
+    lineaId: 'lin-14',
+    paradaId: 'par-201',
+    sentido: 'ida',
+    tipoDeDia: 'habil',
+    hora: '09:45',
+  },
+];

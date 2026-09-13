@@ -8,7 +8,10 @@ export default function RootLayout() {
         headerTintColor: '#fff',
       }}
     >
-      <Stack.Screen name='index' options={{ title: 'Transporte Paraná' }} />
+      <Stack.Screen name='index' options={{ headerShown: false }} />
+      <Stack.Screen name='(tabs)' options={{ headerShown: false }} />
+      <Stack.Screen name='linea/[id]' options={{ title: 'Línea' }} />
+      <Stack.Screen name='parada/[id]' options={{ title: 'Parada' }} />
     </Stack>
   );
 }

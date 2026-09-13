@@ -10,6 +10,7 @@
     "web": "expo start --web"
   },
   "dependencies": {
+    "@react-native-vector-icons/ionicons": "^13.1.4",
     "expo": "^57.0.1",
     "expo-constants": "~57.0.18",
     "expo-linking": "~57.0.10",
