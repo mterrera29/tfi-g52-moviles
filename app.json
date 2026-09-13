@@ -1,14 +1,24 @@
 {
-  "name": "tp1-g52-moviles",
-  "slug": "tp1-g52-moviles",
-  "extra": {
-    "eas": {
-      "projectId": "a223bbf2-7d51-4494-8fe5-71a41c950df1"
-    }
-  },
   "expo": {
+    "name": "tp1-g52-moviles",
+    "slug": "tp1-g52-moviles",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "scheme": "tp1g52moviles",
     "android": {
       "package": "com.mterrera29.tp1g52moviles"
+    },
+    "web": {
+      "bundler": "metro"
+    },
+    "plugins": ["expo-router"],
+    "experiments": {
+      "typedRoutes": true
+    },
+    "extra": {
+      "eas": {
+        "projectId": "a223bbf2-7d51-4494-8fe5-71a41c950df1"
+      }
     }
   }
 }
