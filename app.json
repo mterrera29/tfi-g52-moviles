@@ -1,4 +1,14 @@
 {
   "name": "tp1-g52-moviles",
-  "slug": "tp1-g52-moviles"
+  "slug": "tp1-g52-moviles",
+  "extra": {
+    "eas": {
+      "projectId": "a223bbf2-7d51-4494-8fe5-71a41c950df1"
+    }
+  },
+  "expo": {
+    "android": {
+      "package": "com.mterrera29.tp1g52moviles"
+    }
+  }
 }
