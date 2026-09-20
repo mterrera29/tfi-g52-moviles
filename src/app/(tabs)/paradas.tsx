@@ -11,14 +11,19 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { useTema } from '@/contextos/tema';
+import { useColumnasLista } from '@/hooks/useColumnasLista';
 import { obtenerParadas } from '@/servicios/paradas';
 import type { Parada } from '@/tipos/parada';
 
 export default function ParadasScreen() {
+  const { colores } = useTema();
+  const { columnas } = useColumnasLista();
   const [paradas, setParadas] = useState<Parada[]>([]);
   const [busqueda, setBusqueda] = useState('');
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const esGrilla = columnas > 1;
 
   const cargarParadas = useCallback(async () => {
     setCargando(true);
@@ -54,36 +59,59 @@ export default function ParadasScreen() {
 
   if (cargando) {
     return (
-      <SafeAreaView style={styles.centrado} edges={['bottom']}>
-        <ActivityIndicator size='large' color='#0B3A5D' />
-        <Text style={styles.mensaje}>Cargando paradas...</Text>
+      <SafeAreaView
+        style={[estilos.centrado, { backgroundColor: colores.fondo }]}
+        edges={['bottom']}
+      >
+        <ActivityIndicator size='large' color={colores.acento} />
+        <Text style={[estilos.mensaje, { color: colores.textoSecundario }]}>
+          Cargando paradas...
+        </Text>
       </SafeAreaView>
     );
   }
 
   if (error) {
     return (
-      <SafeAreaView style={styles.centrado} edges={['bottom']}>
-        <Text style={styles.error}>{error}</Text>
+      <SafeAreaView
+        style={[estilos.centrado, { backgroundColor: colores.fondo }]}
+        edges={['bottom']}
+      >
+        <Text style={[estilos.error, { color: colores.error }]}>{error}</Text>
       </SafeAreaView>
     );
   }
 
   return (
-    <SafeAreaView style={styles.contenedor} edges={['bottom']}>
+    <SafeAreaView
+      style={[estilos.contenedor, { backgroundColor: colores.fondo }]}
+      edges={['bottom']}
+    >
       <TextInput
         value={busqueda}
         onChangeText={setBusqueda}
         placeholder='Buscar parada por nombre o calle'
-        style={styles.buscador}
+        placeholderTextColor={colores.textoSecundario}
+        style={[
+          estilos.buscador,
+          {
+            borderColor: colores.borde,
+            backgroundColor: colores.fondoSecundario,
+            color: colores.texto,
+          },
+        ]}
         autoCapitalize='none'
       />
 
       <FlatList
+        key={columnas}
         data={paradasFiltradas}
+        numColumns={columnas}
         keyExtractor={(item) => item.id}
         refreshing={cargando}
         onRefresh={cargarParadas}
+        columnWrapperStyle={esGrilla ? estilos.filaGrilla : undefined}
+        contentContainerStyle={esGrilla ? estilos.contenidoGrilla : undefined}
         renderItem={({ item }) => (
           <Pressable
             onPress={() =>
@@ -93,20 +121,31 @@ export default function ParadasScreen() {
               })
             }
             style={({ pressed }) => [
-              styles.fila,
-              pressed && styles.filaPresionada,
+              estilos.fila,
+              esGrilla && estilos.celdaGrilla,
+              esGrilla
+                ? {
+                    borderColor: colores.borde,
+                    backgroundColor: colores.fondoSecundario,
+                  }
+                : { borderBottomColor: colores.borde },
+              pressed && { backgroundColor: colores.fondoSecundario },
             ]}
           >
-            <Text style={styles.nombre}>{item.nombre}</Text>
-            <Text style={styles.detalle}>
+            <Text style={[estilos.nombre, { color: colores.texto }]}>
+              {item.nombre}
+            </Text>
+            <Text style={[estilos.detalle, { color: colores.textoSecundario }]}>
               {item.refugio ? 'Con refugio' : 'Sin refugio'} · Sentido{' '}
               {item.sentido}
             </Text>
           </Pressable>
         )}
         ListEmptyComponent={
-          <View style={styles.centrado}>
-            <Text style={styles.mensaje}>No se encontraron paradas.</Text>
+          <View style={estilos.listaVacia}>
+            <Text style={[estilos.mensaje, { color: colores.textoSecundario }]}>
+              No se encontraron paradas.
+            </Text>
           </View>
         }
       />
@@ -114,16 +153,20 @@ export default function ParadasScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const estilos = StyleSheet.create({
   contenedor: {
     flex: 1,
-    backgroundColor: '#fff',
   },
   centrado: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
     padding: 24,
+    gap: 12,
+  },
+  listaVacia: {
+    padding: 24,
+    alignItems: 'center',
   },
   buscador: {
     margin: 16,
@@ -131,36 +174,40 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 12,
     borderWidth: 1,
-    borderColor: '#D0D7DE',
     borderRadius: 10,
     fontSize: 16,
+  },
+  contenidoGrilla: {
+    paddingHorizontal: 8,
+  },
+  filaGrilla: {
+    gap: 8,
   },
   fila: {
     paddingHorizontal: 16,
     paddingVertical: 14,
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: '#D0D7DE',
   },
-  filaPresionada: {
-    backgroundColor: '#F4F7FA',
+  celdaGrilla: {
+    flex: 1,
+    borderBottomWidth: 0,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderRadius: 10,
+    marginBottom: 8,
   },
   nombre: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#1A1A1A',
   },
   detalle: {
     marginTop: 4,
     fontSize: 14,
-    color: '#5C6670',
   },
   mensaje: {
     fontSize: 16,
-    color: '#5C6670',
   },
   error: {
     fontSize: 16,
-    color: '#B42318',
     textAlign: 'center',
   },
 });

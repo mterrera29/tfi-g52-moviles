@@ -9,6 +9,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { useTema } from '@/contextos/tema';
 import { obtenerAvisosPorLinea } from '@/servicios/avisos';
 import { obtenerLineaPorId } from '@/servicios/lineas';
 import { obtenerParadasPorIds } from '@/servicios/paradas';
@@ -19,6 +20,7 @@ import type { Parada } from '@/tipos/parada';
 type RecorridoConParadas = Recorrido & { paradas: Parada[] };
 
 export default function LineaDetalleScreen() {
+  const { colores } = useTema();
   const { id } = useLocalSearchParams<{ id: string }>();
   const lineaId = Array.isArray(id) ? id[0] : id;
 
@@ -89,65 +91,121 @@ export default function LineaDetalleScreen() {
 
   if (cargando) {
     return (
-      <SafeAreaView style={styles.centrado} edges={['bottom']}>
-        <ActivityIndicator size="large" color="#0B3A5D" />
-        <Text style={styles.mensaje}>Cargando línea...</Text>
+      <SafeAreaView
+        style={[estilos.centrado, { backgroundColor: colores.fondo }]}
+        edges={['bottom']}
+      >
+        <ActivityIndicator size='large' color={colores.acento} />
+        <Text style={[estilos.mensaje, { color: colores.textoSecundario }]}>
+          Cargando línea...
+        </Text>
       </SafeAreaView>
     );
   }
 
   if (error || !linea) {
     return (
-      <SafeAreaView style={styles.centrado} edges={['bottom']}>
-        <Text style={styles.error}>{error ?? 'No se pudo cargar la línea.'}</Text>
+      <SafeAreaView
+        style={[estilos.centrado, { backgroundColor: colores.fondo }]}
+        edges={['bottom']}
+      >
+        <Text style={[estilos.error, { color: colores.error }]}>
+          {error ?? 'No se pudo cargar la línea.'}
+        </Text>
       </SafeAreaView>
     );
   }
 
   return (
-    <SafeAreaView style={styles.contenedor} edges={['bottom']}>
+    <SafeAreaView
+      style={[estilos.contenedor, { backgroundColor: colores.fondo }]}
+      edges={['bottom']}
+    >
       <Stack.Screen options={{ title: `Línea ${linea.numero}` }} />
 
-      <ScrollView contentContainerStyle={styles.scroll}>
-        <View style={styles.encabezado}>
-          <View style={[styles.badge, { backgroundColor: linea.color }]}>
-            <Text style={styles.numero}>{linea.numero}</Text>
+      <ScrollView contentContainerStyle={estilos.scroll}>
+        <View style={estilos.encabezado}>
+          <View style={[estilos.badge, { backgroundColor: linea.color }]}>
+            <Text style={estilos.numero}>{linea.numero}</Text>
           </View>
-          <View style={styles.encabezadoTexto}>
-            <Text style={styles.nombre}>{linea.nombre}</Text>
-            <Text style={styles.empresa}>{linea.empresa}</Text>
+          <View style={estilos.encabezadoTexto}>
+            <Text style={[estilos.nombre, { color: colores.texto }]}>
+              {linea.nombre}
+            </Text>
+            <Text style={[estilos.empresa, { color: colores.textoSecundario }]}>
+              {linea.empresa}
+            </Text>
           </View>
         </View>
 
         {!linea.activa && (
-          <View style={styles.alertaInactiva}>
-            <Text style={styles.alertaTexto}>Línea inactiva</Text>
+          <View
+            style={[
+              estilos.alertaInactiva,
+              { backgroundColor: colores.tarjetaAvisoSuspension },
+            ]}
+          >
+            <Text style={[estilos.alertaTexto, { color: colores.error }]}>
+              Línea inactiva
+            </Text>
           </View>
         )}
 
         {avisos.map((aviso) => (
-          <View key={aviso.id} style={styles.alertaDesvio}>
-            <Text style={styles.alertaTitulo}>{aviso.titulo}</Text>
-            <Text style={styles.alertaDetalle}>{aviso.detalle}</Text>
+          <View
+            key={aviso.id}
+            style={[
+              estilos.alertaDesvio,
+              { backgroundColor: colores.tarjetaAvisoDesvio },
+            ]}
+          >
+            <Text style={[estilos.alertaTitulo, { color: colores.texto }]}>
+              {aviso.titulo}
+            </Text>
+            <Text
+              style={[estilos.alertaDetalle, { color: colores.textoSecundario }]}
+            >
+              {aviso.detalle}
+            </Text>
           </View>
         ))}
 
         {recorridos.map((recorrido) => (
-          <View key={recorrido.sentido} style={styles.seccion}>
-            <Text style={styles.seccionTitulo}>
-              {recorrido.sentido === 'ida' ? 'Ida' : 'Vuelta'} — {recorrido.destino}
+          <View key={recorrido.sentido} style={estilos.seccion}>
+            <Text style={[estilos.seccionTitulo, { color: colores.acento }]}>
+              {recorrido.sentido === 'ida' ? 'Ida' : 'Vuelta'} —{' '}
+              {recorrido.destino}
             </Text>
 
             {recorrido.paradas.length === 0 ? (
-              <Text style={styles.mensaje}>Sin paradas para este sentido.</Text>
+              <Text style={[estilos.mensaje, { color: colores.textoSecundario }]}>
+                Sin paradas para este sentido.
+              </Text>
             ) : (
               recorrido.paradas.map((parada, indice) => (
-                <View key={parada.id} style={styles.filaParada}>
-                  <Text style={styles.orden}>{indice + 1}</Text>
-                  <View style={styles.paradaInfo}>
-                    <Text style={styles.paradaNombre}>{parada.nombre}</Text>
+                <View
+                  key={parada.id}
+                  style={[
+                    estilos.filaParada,
+                    { borderBottomColor: colores.borde },
+                  ]}
+                >
+                  <Text style={[estilos.orden, { color: colores.acento }]}>
+                    {indice + 1}
+                  </Text>
+                  <View style={estilos.paradaInfo}>
+                    <Text style={[estilos.paradaNombre, { color: colores.texto }]}>
+                      {parada.nombre}
+                    </Text>
                     {parada.refugio && (
-                      <Text style={styles.paradaDetalle}>Con refugio</Text>
+                      <Text
+                        style={[
+                          estilos.paradaDetalle,
+                          { color: colores.textoSecundario },
+                        ]}
+                      >
+                        Con refugio
+                      </Text>
                     )}
                   </View>
                 </View>
@@ -160,10 +218,9 @@ export default function LineaDetalleScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const estilos = StyleSheet.create({
   contenedor: {
     flex: 1,
-    backgroundColor: '#fff',
   },
   scroll: {
     padding: 16,
@@ -200,32 +257,24 @@ const styles = StyleSheet.create({
   nombre: {
     fontSize: 20,
     fontWeight: '700',
-    color: '#1A1A1A',
   },
   empresa: {
     fontSize: 15,
-    color: '#5C6670',
   },
   alertaInactiva: {
-    backgroundColor: '#FEE4E2',
     padding: 12,
     borderRadius: 8,
   },
   alertaDesvio: {
-    backgroundColor: '#FFF4E5',
     padding: 12,
     borderRadius: 8,
     gap: 4,
   },
   alertaTitulo: {
     fontWeight: '700',
-    color: '#8A4B00',
   },
-  alertaDetalle: {
-    color: '#5C6670',
-  },
+  alertaDetalle: {},
   alertaTexto: {
-    color: '#B42318',
     fontWeight: '600',
   },
   seccion: {
@@ -234,7 +283,6 @@ const styles = StyleSheet.create({
   seccionTitulo: {
     fontSize: 17,
     fontWeight: '700',
-    color: '#0B3A5D',
   },
   filaParada: {
     flexDirection: 'row',
@@ -242,12 +290,10 @@ const styles = StyleSheet.create({
     gap: 12,
     paddingVertical: 10,
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: '#D0D7DE',
   },
   orden: {
     width: 24,
     fontWeight: '700',
-    color: '#0B3A5D',
   },
   paradaInfo: {
     flex: 1,
@@ -255,19 +301,15 @@ const styles = StyleSheet.create({
   },
   paradaNombre: {
     fontSize: 16,
-    color: '#1A1A1A',
   },
   paradaDetalle: {
     fontSize: 13,
-    color: '#5C6670',
   },
   mensaje: {
     fontSize: 15,
-    color: '#5C6670',
   },
   error: {
     fontSize: 16,
-    color: '#B42318',
     textAlign: 'center',
   },
 });

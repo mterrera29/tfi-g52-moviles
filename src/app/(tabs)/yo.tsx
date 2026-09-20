@@ -12,12 +12,55 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { obtenerLineas } from '@/servicios/lineas';
 import { obtenerParadas } from '@/servicios/paradas';
+import { useTema } from '@/contextos/tema';
 import { obtenerUsuario } from '@/servicios/usuario';
 import type { Linea } from '@/tipos/linea';
 import type { Parada } from '@/tipos/parada';
-import type { Usuario } from '@/tipos/usuario';
+import type { Tema, Usuario } from '@/tipos/usuario';
+
+function OpcionTema({
+  etiqueta,
+  valor,
+  seleccionado,
+  onSeleccionar,
+}: {
+  etiqueta: string;
+  valor: Tema;
+  seleccionado: boolean;
+  onSeleccionar: (valor: Tema) => void;
+}) {
+  const { colores } = useTema();
+
+  return (
+    <Pressable
+      onPress={() => onSeleccionar(valor)}
+      accessibilityRole='button'
+      accessibilityLabel={`Usar tema ${etiqueta}`}
+      accessibilityState={{ selected: seleccionado }}
+      style={[
+        estilos.opcionTema,
+        {
+          borderColor: seleccionado ? colores.acento : colores.borde,
+          backgroundColor: seleccionado
+            ? colores.acento
+            : colores.fondoSecundario,
+        },
+      ]}
+    >
+      <Text
+        style={{
+          color: seleccionado ? colores.acentoTexto : colores.texto,
+          fontWeight: seleccionado ? '700' : '500',
+        }}
+      >
+        {etiqueta}
+      </Text>
+    </Pressable>
+  );
+}
 
 export default function YoScreen() {
+  const { colores, preferencia, setPreferencia } = useTema();
   const [usuario, setUsuario] = useState<Usuario | null>(null);
   const [lineasFavoritas, setLineasFavoritas] = useState<Linea[]>([]);
   const [paradasFavoritas, setParadasFavoritas] = useState<Parada[]>([]);
@@ -73,17 +116,25 @@ export default function YoScreen() {
 
   if (cargando) {
     return (
-      <SafeAreaView style={styles.centrado} edges={['bottom']}>
-        <ActivityIndicator size='large' color='#0B3A5D' />
-        <Text style={styles.mensaje}>Cargando usuario...</Text>
+      <SafeAreaView
+        style={[estilos.centrado, { backgroundColor: colores.fondo }]}
+        edges={['bottom']}
+      >
+        <ActivityIndicator size='large' color={colores.acento} />
+        <Text style={[estilos.mensaje, { color: colores.textoSecundario }]}>
+          Cargando usuario...
+        </Text>
       </SafeAreaView>
     );
   }
 
   if (error || !usuario) {
     return (
-      <SafeAreaView style={styles.centrado} edges={['bottom']}>
-        <Text style={styles.error}>
+      <SafeAreaView
+        style={[estilos.centrado, { backgroundColor: colores.fondo }]}
+        edges={['bottom']}
+      >
+        <Text style={[estilos.error, { color: colores.error }]}>
           {error ?? 'No se pudo cargar el usuario.'}
         </Text>
       </SafeAreaView>
@@ -91,27 +142,77 @@ export default function YoScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.contenedor} edges={['bottom']}>
-      <ScrollView contentContainerStyle={styles.scroll}>
-        <View style={styles.tarjetaUsuario}>
-          <Text style={styles.nombre}>{usuario.nombre}</Text>
-          <Text style={styles.email}>{usuario.email}</Text>
-          <Text style={styles.detalle}>
+    <SafeAreaView
+      style={[estilos.contenedor, { backgroundColor: colores.fondo }]}
+      edges={['bottom']}
+    >
+      <ScrollView contentContainerStyle={estilos.scroll}>
+        <View
+          style={[
+            estilos.tarjetaUsuario,
+            { backgroundColor: colores.fondoSecundario },
+          ]}
+        >
+          <Text style={[estilos.nombre, { color: colores.texto }]}>
+            {usuario.nombre}
+          </Text>
+          <Text style={[estilos.email, { color: colores.textoSecundario }]}>
+            {usuario.email}
+          </Text>
+          <Text style={[estilos.detalle, { color: colores.textoSecundario }]}>
             Avisos activos: {usuario.avisosActivos ? 'Sí' : 'No'}
           </Text>
-          <Text style={styles.detalle}>Tema: {usuario.tema}</Text>
 
-          <Pressable style={styles.botonSecundario} disabled>
-            <Text style={styles.botonSecundarioTexto}>
+          <Text style={[estilos.seccionChica, { color: colores.texto }]}>
+            Apariencia
+          </Text>
+          <View style={estilos.filaTemas}>
+            <OpcionTema
+              etiqueta='Claro'
+              valor='claro'
+              seleccionado={preferencia === 'claro'}
+              onSeleccionar={setPreferencia}
+            />
+            <OpcionTema
+              etiqueta='Oscuro'
+              valor='oscuro'
+              seleccionado={preferencia === 'oscuro'}
+              onSeleccionar={setPreferencia}
+            />
+            <OpcionTema
+              etiqueta='Sistema'
+              valor='sistema'
+              seleccionado={preferencia === 'sistema'}
+              onSeleccionar={setPreferencia}
+            />
+          </View>
+
+          <Pressable
+            style={[
+              estilos.botonSecundario,
+              { backgroundColor: colores.borde },
+            ]}
+            disabled
+          >
+            <Text
+              style={[
+                estilos.botonSecundarioTexto,
+                { color: colores.textoSecundario },
+              ]}
+            >
               Iniciar sesión (próximamente)
             </Text>
           </Pressable>
         </View>
 
-        <Text style={styles.seccion}>Mis líneas favoritas</Text>
+        <Text style={[estilos.seccion, { color: colores.acento }]}>
+          Mis líneas favoritas
+        </Text>
 
         {lineasFavoritas.length === 0 ? (
-          <Text style={styles.mensaje}>No tenés líneas favoritas.</Text>
+          <Text style={[estilos.mensaje, { color: colores.textoSecundario }]}>
+            No tenés líneas favoritas.
+          </Text>
         ) : (
           lineasFavoritas.map((linea) => (
             <Pressable
@@ -123,25 +224,39 @@ export default function YoScreen() {
                 })
               }
               style={({ pressed }) => [
-                styles.fila,
-                pressed && styles.filaPresionada,
+                estilos.fila,
+                { borderBottomColor: colores.borde },
+                pressed && { backgroundColor: colores.fondoSecundario },
               ]}
             >
-              <View style={[styles.badge, { backgroundColor: linea.color }]}>
-                <Text style={styles.badgeNumero}>{linea.numero}</Text>
+              <View style={[estilos.badge, { backgroundColor: linea.color }]}>
+                <Text style={estilos.badgeNumero}>{linea.numero}</Text>
               </View>
-              <View style={styles.filaTexto}>
-                <Text style={styles.filaTitulo}>{linea.nombre}</Text>
-                <Text style={styles.filaDetalle}>{linea.empresa}</Text>
+              <View style={estilos.filaTexto}>
+                <Text style={[estilos.filaTitulo, { color: colores.texto }]}>
+                  {linea.nombre}
+                </Text>
+                <Text
+                  style={[
+                    estilos.filaDetalle,
+                    { color: colores.textoSecundario },
+                  ]}
+                >
+                  {linea.empresa}
+                </Text>
               </View>
             </Pressable>
           ))
         )}
 
-        <Text style={styles.seccion}>Mis paradas favoritas</Text>
+        <Text style={[estilos.seccion, { color: colores.acento }]}>
+          Mis paradas favoritas
+        </Text>
 
         {paradasFavoritas.length === 0 ? (
-          <Text style={styles.mensaje}>No tenés paradas favoritas.</Text>
+          <Text style={[estilos.mensaje, { color: colores.textoSecundario }]}>
+            No tenés paradas favoritas.
+          </Text>
         ) : (
           paradasFavoritas.map((parada) => (
             <Pressable
@@ -153,16 +268,26 @@ export default function YoScreen() {
                 })
               }
               style={({ pressed }) => [
-                styles.fila,
-                pressed && styles.filaPresionada,
+                estilos.fila,
+                { borderBottomColor: colores.borde },
+                pressed && { backgroundColor: colores.fondoSecundario },
               ]}
             >
-              <View style={styles.iconoParada}>
-                <Text style={styles.iconoParadaTexto}>P</Text>
+              <View
+                style={[estilos.iconoParada, { backgroundColor: colores.acento }]}
+              >
+                <Text style={estilos.iconoParadaTexto}>P</Text>
               </View>
-              <View style={styles.filaTexto}>
-                <Text style={styles.filaTitulo}>{parada.nombre}</Text>
-                <Text style={styles.filaDetalle}>
+              <View style={estilos.filaTexto}>
+                <Text style={[estilos.filaTitulo, { color: colores.texto }]}>
+                  {parada.nombre}
+                </Text>
+                <Text
+                  style={[
+                    estilos.filaDetalle,
+                    { color: colores.textoSecundario },
+                  ]}
+                >
                   {parada.refugio ? 'Con refugio' : 'Sin refugio'}
                 </Text>
               </View>
@@ -174,10 +299,9 @@ export default function YoScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const estilos = StyleSheet.create({
   contenedor: {
     flex: 1,
-    backgroundColor: '#fff',
   },
   scroll: {
     padding: 16,
@@ -191,7 +315,6 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   tarjetaUsuario: {
-    backgroundColor: '#F4F7FA',
     borderRadius: 12,
     padding: 16,
     gap: 6,
@@ -199,15 +322,29 @@ const styles = StyleSheet.create({
   nombre: {
     fontSize: 22,
     fontWeight: '700',
-    color: '#1A1A1A',
   },
   email: {
     fontSize: 15,
-    color: '#5C6670',
   },
   detalle: {
     fontSize: 14,
-    color: '#5C6670',
+  },
+  seccionChica: {
+    marginTop: 8,
+    fontSize: 15,
+    fontWeight: '600',
+  },
+  filaTemas: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginTop: 4,
+  },
+  opcionTema: {
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 999,
+    borderWidth: 2,
   },
   botonSecundario: {
     marginTop: 8,
@@ -215,17 +352,14 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderRadius: 8,
-    backgroundColor: '#E8EEF3',
   },
   botonSecundarioTexto: {
-    color: '#5C6670',
     fontWeight: '600',
   },
   seccion: {
     marginTop: 8,
     fontSize: 17,
     fontWeight: '700',
-    color: '#0B3A5D',
   },
   fila: {
     flexDirection: 'row',
@@ -233,10 +367,6 @@ const styles = StyleSheet.create({
     gap: 12,
     paddingVertical: 12,
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: '#D0D7DE',
-  },
-  filaPresionada: {
-    backgroundColor: '#F9FBFC',
   },
   filaTexto: {
     flex: 1,
@@ -245,11 +375,9 @@ const styles = StyleSheet.create({
   filaTitulo: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#1A1A1A',
   },
   filaDetalle: {
     fontSize: 14,
-    color: '#5C6670',
   },
   badge: {
     width: 40,
@@ -268,7 +396,6 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#0B3A5D',
   },
   iconoParadaTexto: {
     color: '#fff',
@@ -276,11 +403,9 @@ const styles = StyleSheet.create({
   },
   mensaje: {
     fontSize: 15,
-    color: '#5C6670',
   },
   error: {
     fontSize: 16,
-    color: '#B42318',
     textAlign: 'center',
   },
 });

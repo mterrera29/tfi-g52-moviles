@@ -9,6 +9,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { useTema } from '@/contextos/tema';
 import { obtenerProximosHorariosPorParada } from '@/servicios/horarios';
 import { obtenerLineas } from '@/servicios/lineas';
 import { obtenerParadaPorId } from '@/servicios/paradas';
@@ -17,6 +18,7 @@ import type { Linea } from '@/tipos/linea';
 import type { Parada } from '@/tipos/parada';
 
 export default function ParadaDetalleScreen() {
+  const { colores } = useTema();
   const { id } = useLocalSearchParams<{ id: string }>();
   const paradaId = Array.isArray(id) ? id[0] : id;
 
@@ -77,17 +79,25 @@ export default function ParadaDetalleScreen() {
 
   if (cargando) {
     return (
-      <SafeAreaView style={styles.centrado} edges={['bottom']}>
-        <ActivityIndicator size='large' color='#0B3A5D' />
-        <Text style={styles.mensaje}>Cargando parada...</Text>
+      <SafeAreaView
+        style={[estilos.centrado, { backgroundColor: colores.fondo }]}
+        edges={['bottom']}
+      >
+        <ActivityIndicator size='large' color={colores.acento} />
+        <Text style={[estilos.mensaje, { color: colores.textoSecundario }]}>
+          Cargando parada...
+        </Text>
       </SafeAreaView>
     );
   }
 
   if (error || !parada) {
     return (
-      <SafeAreaView style={styles.centrado} edges={['bottom']}>
-        <Text style={styles.error}>
+      <SafeAreaView
+        style={[estilos.centrado, { backgroundColor: colores.fondo }]}
+        edges={['bottom']}
+      >
+        <Text style={[estilos.error, { color: colores.error }]}>
           {error ?? 'No se pudo cargar la parada.'}
         </Text>
       </SafeAreaView>
@@ -95,31 +105,38 @@ export default function ParadaDetalleScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.contenedor} edges={['bottom']}>
+    <SafeAreaView
+      style={[estilos.contenedor, { backgroundColor: colores.fondo }]}
+      edges={['bottom']}
+    >
       <Stack.Screen options={{ title: parada.nombre }} />
 
-      <ScrollView contentContainerStyle={styles.scroll}>
-        <Text style={styles.subtitulo}>
+      <ScrollView contentContainerStyle={estilos.scroll}>
+        <Text style={[estilos.subtitulo, { color: colores.textoSecundario }]}>
           {parada.refugio ? 'Con refugio' : 'Sin refugio'} · Sentido{' '}
           {parada.sentido}
         </Text>
 
-        <Text style={styles.seccion}>Líneas que paran acá</Text>
-        <View style={styles.lineasFila}>
+        <Text style={[estilos.seccion, { color: colores.acento }]}>
+          Líneas que paran acá
+        </Text>
+        <View style={estilos.lineasFila}>
           {lineas.map((linea) => (
             <View
               key={linea.id}
-              style={[styles.badge, { backgroundColor: linea.color }]}
+              style={[estilos.badge, { backgroundColor: linea.color }]}
             >
-              <Text style={styles.badgeNumero}>{linea.numero}</Text>
+              <Text style={estilos.badgeNumero}>{linea.numero}</Text>
             </View>
           ))}
         </View>
 
-        <Text style={styles.seccion}>Próximos horarios (según la tabla)</Text>
+        <Text style={[estilos.seccion, { color: colores.acento }]}>
+          Próximos horarios (según la tabla)
+        </Text>
 
         {horarios.length === 0 ? (
-          <Text style={styles.mensaje}>
+          <Text style={[estilos.mensaje, { color: colores.textoSecundario }]}>
             No hay más servicio hoy en esta parada.
           </Text>
         ) : (
@@ -127,16 +144,24 @@ export default function ParadaDetalleScreen() {
             const linea = lineas.find((item) => item.id === horario.lineaId);
 
             return (
-              <View key={horario.id} style={styles.filaHorario}>
+              <View
+                key={horario.id}
+                style={[
+                  estilos.filaHorario,
+                  { borderBottomColor: colores.borde },
+                ]}
+              >
                 <View
                   style={[
-                    styles.badgeChico,
-                    { backgroundColor: linea?.color ?? '#0B3A5D' },
+                    estilos.badgeChico,
+                    { backgroundColor: linea?.color ?? colores.acento },
                   ]}
                 >
-                  <Text style={styles.badgeNumero}>{linea?.numero ?? '?'}</Text>
+                  <Text style={estilos.badgeNumero}>{linea?.numero ?? '?'}</Text>
                 </View>
-                <Text style={styles.hora}>Según la tabla, {horario.hora}</Text>
+                <Text style={[estilos.hora, { color: colores.texto }]}>
+                  Según la tabla, {horario.hora}
+                </Text>
               </View>
             );
           })
@@ -146,10 +171,9 @@ export default function ParadaDetalleScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const estilos = StyleSheet.create({
   contenedor: {
     flex: 1,
-    backgroundColor: '#fff',
   },
   scroll: {
     padding: 16,
@@ -164,12 +188,10 @@ const styles = StyleSheet.create({
   },
   subtitulo: {
     fontSize: 15,
-    color: '#5C6670',
   },
   seccion: {
     fontSize: 17,
     fontWeight: '700',
-    color: '#0B3A5D',
     marginTop: 8,
   },
   lineasFila: {
@@ -201,19 +223,15 @@ const styles = StyleSheet.create({
     gap: 12,
     paddingVertical: 8,
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: '#D0D7DE',
   },
   hora: {
     fontSize: 16,
-    color: '#1A1A1A',
   },
   mensaje: {
     fontSize: 15,
-    color: '#5C6670',
   },
   error: {
     fontSize: 16,
-    color: '#B42318',
     textAlign: 'center',
   },
 });

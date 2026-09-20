@@ -8,6 +8,8 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { useTema } from '@/contextos/tema';
+import type { ColoresTema } from '@/temas/paleta';
 import { obtenerAvisos } from '@/servicios/avisos';
 import { obtenerLineas } from '@/servicios/lineas';
 import type { Aviso, Gravedad } from '@/tipos/aviso';
@@ -19,10 +21,10 @@ function etiquetaGravedad(gravedad: Gravedad) {
   return 'Informativo';
 }
 
-function colorGravedad(gravedad: Gravedad) {
-  if (gravedad === 'desvio') return '#FFF4E5';
-  if (gravedad === 'suspension') return '#FEE4E2';
-  return '#E8F4FD';
+function colorGravedad(gravedad: Gravedad, colores: ColoresTema) {
+  if (gravedad === 'desvio') return colores.tarjetaAvisoDesvio;
+  if (gravedad === 'suspension') return colores.tarjetaAvisoSuspension;
+  return colores.tarjetaAvisoInfo;
 }
 
 function formatearFecha(iso: string) {
@@ -34,6 +36,7 @@ function formatearFecha(iso: string) {
 }
 
 export default function AvisosScreen() {
+  const { colores } = useTema();
   const [avisos, setAvisos] = useState<Aviso[]>([]);
   const [lineasPorId, setLineasPorId] = useState<Record<string, Linea>>({});
   const [cargando, setCargando] = useState(true);
@@ -78,23 +81,34 @@ export default function AvisosScreen() {
 
   if (cargando) {
     return (
-      <SafeAreaView style={styles.centrado} edges={['bottom']}>
-        <ActivityIndicator size='large' color='#0B3A5D' />
-        <Text style={styles.mensaje}>Cargando avisos...</Text>
+      <SafeAreaView
+        style={[estilos.centrado, { backgroundColor: colores.fondo }]}
+        edges={['bottom']}
+      >
+        <ActivityIndicator size='large' color={colores.acento} />
+        <Text style={[estilos.mensaje, { color: colores.textoSecundario }]}>
+          Cargando avisos...
+        </Text>
       </SafeAreaView>
     );
   }
 
   if (error) {
     return (
-      <SafeAreaView style={styles.centrado} edges={['bottom']}>
-        <Text style={styles.error}>{error}</Text>
+      <SafeAreaView
+        style={[estilos.centrado, { backgroundColor: colores.fondo }]}
+        edges={['bottom']}
+      >
+        <Text style={[estilos.error, { color: colores.error }]}>{error}</Text>
       </SafeAreaView>
     );
   }
 
   return (
-    <SafeAreaView style={styles.contenedor} edges={['bottom']}>
+    <SafeAreaView
+      style={[estilos.contenedor, { backgroundColor: colores.fondo }]}
+      edges={['bottom']}
+    >
       <FlatList
         data={avisos}
         keyExtractor={(item) => item.id}
@@ -103,15 +117,17 @@ export default function AvisosScreen() {
         renderItem={({ item }) => (
           <View
             style={[
-              styles.tarjeta,
-              { backgroundColor: colorGravedad(item.gravedad) },
+              estilos.tarjeta,
+              { backgroundColor: colorGravedad(item.gravedad, colores) },
             ]}
           >
-            <Text style={styles.etiqueta}>
+            <Text style={[estilos.etiqueta, { color: colores.acento }]}>
               {etiquetaGravedad(item.gravedad)}
             </Text>
-            <Text style={styles.titulo}>{item.titulo}</Text>
-            <View style={styles.lineasFila}>
+            <Text style={[estilos.titulo, { color: colores.texto }]}>
+              {item.titulo}
+            </Text>
+            <View style={estilos.lineasFila}>
               {item.lineaIds.map((lineaId) => {
                 const linea = lineasPorId[lineaId];
 
@@ -122,37 +138,40 @@ export default function AvisosScreen() {
                 return (
                   <View
                     key={lineaId}
-                    style={[styles.badge, { backgroundColor: linea.color }]}
+                    style={[estilos.badge, { backgroundColor: linea.color }]}
                   >
-                    <Text style={styles.badgeNumero}>{linea.numero}</Text>
+                    <Text style={estilos.badgeNumero}>{linea.numero}</Text>
                   </View>
                 );
               })}
             </View>
-            <Text style={styles.detalle}>{item.detalle}</Text>
-            <Text style={styles.fecha}>
+            <Text style={[estilos.detalle, { color: colores.textoSecundario }]}>
+              {item.detalle}
+            </Text>
+            <Text style={[estilos.fecha, { color: colores.textoSecundario }]}>
               Desde {formatearFecha(item.desde)}
               {item.hasta ? ` · Hasta ${formatearFecha(item.hasta)}` : ''}
             </Text>
           </View>
         )}
         ListEmptyComponent={
-          <View style={styles.centrado}>
-            <Text style={styles.mensaje}>No hay avisos vigentes.</Text>
+          <View style={estilos.listaVacia}>
+            <Text style={[estilos.mensaje, { color: colores.textoSecundario }]}>
+              No hay avisos vigentes.
+            </Text>
           </View>
         }
         contentContainerStyle={
-          avisos.length === 0 ? styles.listaVacia : undefined
+          avisos.length === 0 ? estilos.listaVaciaContenedor : undefined
         }
       />
     </SafeAreaView>
   );
 }
 
-const styles = StyleSheet.create({
+const estilos = StyleSheet.create({
   contenedor: {
     flex: 1,
-    backgroundColor: '#fff',
   },
   centrado: {
     flex: 1,
@@ -162,6 +181,10 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   listaVacia: {
+    padding: 24,
+    alignItems: 'center',
+  },
+  listaVaciaContenedor: {
     flexGrow: 1,
   },
   tarjeta: {
@@ -174,13 +197,11 @@ const styles = StyleSheet.create({
   etiqueta: {
     fontSize: 12,
     fontWeight: '700',
-    color: '#0B3A5D',
     textTransform: 'uppercase',
   },
   titulo: {
     fontSize: 17,
     fontWeight: '700',
-    color: '#1A1A1A',
   },
   lineasFila: {
     flexDirection: 'row',
@@ -201,19 +222,15 @@ const styles = StyleSheet.create({
   },
   detalle: {
     fontSize: 15,
-    color: '#5C6670',
   },
   fecha: {
     fontSize: 13,
-    color: '#5C6670',
   },
   mensaje: {
     fontSize: 16,
-    color: '#5C6670',
   },
   error: {
     fontSize: 16,
-    color: '#B42318',
     textAlign: 'center',
   },
 });
