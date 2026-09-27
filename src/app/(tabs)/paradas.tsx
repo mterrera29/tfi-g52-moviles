@@ -1,8 +1,10 @@
-import { router } from 'expo-router';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { router, useFocusEffect } from 'expo-router';
+import { useCallback, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   FlatList,
+  KeyboardAvoidingView,
+  Platform,
   Pressable,
   StyleSheet,
   Text,
@@ -18,7 +20,7 @@ import type { Parada } from '@/tipos/parada';
 
 export default function ParadasScreen() {
   const { colores } = useTema();
-  const { columnas } = useColumnasLista();
+  const { columnas, onLayout } = useColumnasLista();
   const [paradas, setParadas] = useState<Parada[]>([]);
   const [busqueda, setBusqueda] = useState('');
   const [cargando, setCargando] = useState(true);
@@ -41,9 +43,11 @@ export default function ParadasScreen() {
     setCargando(false);
   }, []);
 
-  useEffect(() => {
-    cargarParadas();
-  }, [cargarParadas]);
+  useFocusEffect(
+    useCallback(() => {
+      cargarParadas();
+    }, [cargarParadas]),
+  );
 
   const paradasFiltradas = useMemo(() => {
     const texto = busqueda.trim().toLowerCase();
@@ -63,7 +67,11 @@ export default function ParadasScreen() {
         style={[estilos.centrado, { backgroundColor: colores.fondo }]}
         edges={['bottom']}
       >
-        <ActivityIndicator size='large' color={colores.acento} />
+        <ActivityIndicator
+          size='large'
+          color={colores.acento}
+          accessibilityLabel='Cargando paradas'
+        />
         <Text style={[estilos.mensaje, { color: colores.textoSecundario }]}>
           Cargando paradas...
         </Text>
@@ -77,21 +85,33 @@ export default function ParadasScreen() {
         style={[estilos.centrado, { backgroundColor: colores.fondo }]}
         edges={['bottom']}
       >
-        <Text style={[estilos.error, { color: colores.error }]}>{error}</Text>
+        <Text
+          style={[estilos.error, { color: colores.error }]}
+          accessibilityRole='alert'
+        >
+          {error}
+        </Text>
       </SafeAreaView>
     );
   }
 
   return (
     <SafeAreaView
+      onLayout={onLayout}
       style={[estilos.contenedor, { backgroundColor: colores.fondo }]}
       edges={['bottom']}
     >
+      <KeyboardAvoidingView
+        style={estilos.contenedor}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      >
       <TextInput
         value={busqueda}
         onChangeText={setBusqueda}
         placeholder='Buscar parada por nombre o calle'
         placeholderTextColor={colores.textoSecundario}
+        accessibilityLabel='Buscar parada por nombre o calle'
+        accessibilityRole='search'
         style={[
           estilos.buscador,
           {
@@ -103,17 +123,31 @@ export default function ParadasScreen() {
         autoCapitalize='none'
       />
 
+      <Text
+        accessibilityLiveRegion='polite'
+        style={estilos.contador}
+      >
+        {paradasFiltradas.length === 1
+          ? '1 parada encontrada'
+          : `${paradasFiltradas.length} paradas encontradas`}
+      </Text>
+
       <FlatList
-        key={columnas}
+        key={esGrilla ? `grilla-${columnas}` : 'lista'}
         data={paradasFiltradas}
-        numColumns={columnas}
+        {...(esGrilla
+          ? { numColumns: columnas, columnWrapperStyle: estilos.filaGrilla }
+          : {})}
         keyExtractor={(item) => item.id}
         refreshing={cargando}
         onRefresh={cargarParadas}
-        columnWrapperStyle={esGrilla ? estilos.filaGrilla : undefined}
         contentContainerStyle={esGrilla ? estilos.contenidoGrilla : undefined}
         renderItem={({ item }) => (
           <Pressable
+            accessibilityRole='button'
+            accessibilityLabel={`${item.nombre}. ${item.refugio ? 'Con refugio' : 'Sin refugio'}. Sentido ${item.sentido}`}
+            accessibilityHint='Abre el detalle de la parada'
+            hitSlop={8}
             onPress={() =>
               router.push({
                 pathname: '/parada/[id]',
@@ -123,12 +157,11 @@ export default function ParadasScreen() {
             style={({ pressed }) => [
               estilos.fila,
               esGrilla && estilos.celdaGrilla,
-              esGrilla
-                ? {
-                    borderColor: colores.borde,
-                    backgroundColor: colores.fondoSecundario,
-                  }
-                : { borderBottomColor: colores.borde },
+              { borderBottomColor: colores.borde },
+              esGrilla && {
+                borderColor: colores.borde,
+                backgroundColor: colores.fondoSecundario,
+              },
               pressed && { backgroundColor: colores.fondoSecundario },
             ]}
           >
@@ -149,6 +182,7 @@ export default function ParadasScreen() {
           </View>
         }
       />
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
@@ -176,6 +210,13 @@ const estilos = StyleSheet.create({
     borderWidth: 1,
     borderRadius: 10,
     fontSize: 16,
+  },
+  contador: {
+    position: 'absolute',
+    width: 1,
+    height: 1,
+    overflow: 'hidden',
+    opacity: 0,
   },
   contenidoGrilla: {
     paddingHorizontal: 8,

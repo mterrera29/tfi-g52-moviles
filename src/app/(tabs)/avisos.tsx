@@ -85,7 +85,11 @@ export default function AvisosScreen() {
         style={[estilos.centrado, { backgroundColor: colores.fondo }]}
         edges={['bottom']}
       >
-        <ActivityIndicator size='large' color={colores.acento} />
+        <ActivityIndicator
+          size='large'
+          color={colores.acento}
+          accessibilityLabel='Cargando avisos'
+        />
         <Text style={[estilos.mensaje, { color: colores.textoSecundario }]}>
           Cargando avisos...
         </Text>
@@ -99,7 +103,12 @@ export default function AvisosScreen() {
         style={[estilos.centrado, { backgroundColor: colores.fondo }]}
         edges={['bottom']}
       >
-        <Text style={[estilos.error, { color: colores.error }]}>{error}</Text>
+        <Text
+          style={[estilos.error, { color: colores.error }]}
+          accessibilityRole='alert'
+        >
+          {error}
+        </Text>
       </SafeAreaView>
     );
   }
@@ -114,8 +123,17 @@ export default function AvisosScreen() {
         keyExtractor={(item) => item.id}
         refreshing={cargando}
         onRefresh={cargarAvisos}
-        renderItem={({ item }) => (
+        renderItem={({ item }) => {
+          const numerosLineas = item.lineaIds
+            .map((lineaId) => lineasPorId[lineaId]?.numero)
+            .filter(Boolean)
+            .join(', ');
+
+          return (
           <View
+            accessible
+            accessibilityRole='text'
+            accessibilityLabel={`${etiquetaGravedad(item.gravedad)}. ${item.titulo}. Líneas ${numerosLineas}. ${item.detalle}. Desde ${formatearFecha(item.desde)}${item.hasta ? `. Hasta ${formatearFecha(item.hasta)}` : ''}`}
             style={[
               estilos.tarjeta,
               { backgroundColor: colorGravedad(item.gravedad, colores) },
@@ -139,6 +157,8 @@ export default function AvisosScreen() {
                   <View
                     key={lineaId}
                     style={[estilos.badge, { backgroundColor: linea.color }]}
+                    importantForAccessibility='no-hide-descendants'
+                    accessibilityElementsHidden
                   >
                     <Text style={estilos.badgeNumero}>{linea.numero}</Text>
                   </View>
@@ -153,7 +173,8 @@ export default function AvisosScreen() {
               {item.hasta ? ` · Hasta ${formatearFecha(item.hasta)}` : ''}
             </Text>
           </View>
-        )}
+          );
+        }}
         ListEmptyComponent={
           <View style={estilos.listaVacia}>
             <Text style={[estilos.mensaje, { color: colores.textoSecundario }]}>

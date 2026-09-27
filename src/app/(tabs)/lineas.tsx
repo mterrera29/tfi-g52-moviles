@@ -1,15 +1,14 @@
-import { router } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   FlatList,
-  Pressable,
   StyleSheet,
   Text,
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { FilaLinea } from '@/componentes/FilaLinea';
 import { useTema } from '@/contextos/tema';
 import { useColumnasLista } from '@/hooks/useColumnasLista';
 import { obtenerLineas } from '@/servicios/lineas';
@@ -17,7 +16,7 @@ import type { Linea } from '@/tipos/linea';
 
 export default function LineasScreen() {
   const { colores } = useTema();
-  const { columnas } = useColumnasLista();
+  const { columnas, onLayout } = useColumnasLista();
   const [lineas, setLineas] = useState<Linea[]>([]);
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -49,7 +48,11 @@ export default function LineasScreen() {
         style={[estilos.centrado, { backgroundColor: colores.fondo }]}
         edges={['bottom']}
       >
-        <ActivityIndicator size='large' color={colores.acento} />
+        <ActivityIndicator
+          size='large'
+          color={colores.acento}
+          accessibilityLabel='Cargando líneas'
+        />
         <Text style={{ color: colores.textoSecundario }}>Cargando líneas...</Text>
       </SafeAreaView>
     );
@@ -61,55 +64,32 @@ export default function LineasScreen() {
         style={[estilos.centrado, { backgroundColor: colores.fondo }]}
         edges={['bottom']}
       >
-        <Text style={[estilos.error, { color: colores.error }]}>{error}</Text>
+        <Text
+          style={[estilos.error, { color: colores.error }]}
+          accessibilityRole='alert'
+        >
+          {error}
+        </Text>
       </SafeAreaView>
     );
   }
 
   return (
     <SafeAreaView
+      onLayout={onLayout}
       style={[estilos.contenedor, { backgroundColor: colores.fondo }]}
       edges={['bottom']}
     >
       <FlatList
-        key={columnas}
+        key={esGrilla ? `grilla-${columnas}` : 'lista'}
         data={lineas}
-        numColumns={columnas}
+        {...(esGrilla
+          ? { numColumns: columnas, columnWrapperStyle: estilos.filaGrilla }
+          : {})}
         keyExtractor={(item) => item.id}
-        columnWrapperStyle={esGrilla ? estilos.filaGrilla : undefined}
         contentContainerStyle={esGrilla ? estilos.contenidoGrilla : undefined}
         renderItem={({ item }) => (
-          <Pressable
-            onPress={() =>
-              router.push({
-                pathname: '/linea/[id]',
-                params: { id: item.id },
-              })
-            }
-            style={({ pressed }) => [
-              estilos.fila,
-              esGrilla && estilos.celdaGrilla,
-              esGrilla
-                ? {
-                    borderColor: colores.borde,
-                    backgroundColor: colores.fondoSecundario,
-                  }
-                : { borderBottomColor: colores.borde },
-              pressed && { backgroundColor: colores.fondoSecundario },
-            ]}
-          >
-            <View style={[estilos.badge, { backgroundColor: item.color }]}>
-              <Text style={estilos.numero}>{item.numero}</Text>
-            </View>
-            <View style={esGrilla ? estilos.textoGrilla : undefined}>
-              <Text style={[estilos.nombre, { color: colores.texto }]}>
-                {item.nombre}
-              </Text>
-              <Text style={[estilos.empresa, { color: colores.textoSecundario }]}>
-                {item.empresa}
-              </Text>
-            </View>
-          </Pressable>
+          <FilaLinea linea={item} esGrilla={esGrilla} colores={colores} />
         )}
         ListEmptyComponent={
           <Text style={{ color: colores.textoSecundario, padding: 16 }}>
@@ -136,34 +116,5 @@ const estilos = StyleSheet.create({
   filaGrilla: {
     gap: 8,
   },
-  fila: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    padding: 16,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-  },
-  celdaGrilla: {
-    flex: 1,
-    flexDirection: 'column',
-    alignItems: 'flex-start',
-    borderBottomWidth: 0,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderRadius: 10,
-    marginBottom: 8,
-  },
-  textoGrilla: {
-    width: '100%',
-  },
-  badge: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  numero: { color: '#fff', fontWeight: '700' },
-  nombre: { fontSize: 16, fontWeight: '600' },
-  empresa: { fontSize: 14 },
   error: { fontSize: 16, textAlign: 'center' },
 });

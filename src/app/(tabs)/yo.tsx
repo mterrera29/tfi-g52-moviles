@@ -1,4 +1,4 @@
-import { router } from 'expo-router';
+import { Link, router } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
@@ -10,13 +10,13 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { useSesion } from '@/contextos/sesion';
+import { useTema } from '@/contextos/tema';
 import { obtenerLineas } from '@/servicios/lineas';
 import { obtenerParadas } from '@/servicios/paradas';
-import { useTema } from '@/contextos/tema';
-import { obtenerUsuario } from '@/servicios/usuario';
 import type { Linea } from '@/tipos/linea';
 import type { Parada } from '@/tipos/parada';
-import type { Tema, Usuario } from '@/tipos/usuario';
+import type { Tema } from '@/tipos/usuario';
 
 function OpcionTema({
   etiqueta,
@@ -61,24 +61,27 @@ function OpcionTema({
 
 export default function YoScreen() {
   const { colores, preferencia, setPreferencia } = useTema();
-  const [usuario, setUsuario] = useState<Usuario | null>(null);
+  const { sesion, cerrarSesion } = useSesion();
+  const usuario = sesion?.usuario ?? null;
   const [lineasFavoritas, setLineasFavoritas] = useState<Linea[]>([]);
   const [paradasFavoritas, setParadasFavoritas] = useState<Parada[]>([]);
-  const [cargando, setCargando] = useState(true);
+  const [cargando, setCargando] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const cargarDatos = useCallback(async () => {
+  const cargarFavoritos = useCallback(async () => {
+    if (!usuario) {
+      setLineasFavoritas([]);
+      setParadasFavoritas([]);
+      return;
+    }
+
     setCargando(true);
     setError(null);
 
-    const [respuestaUsuario, respuestaLineas, respuestaParadas] =
-      await Promise.all([obtenerUsuario(), obtenerLineas(), obtenerParadas()]);
-
-    if ('error' in respuestaUsuario) {
-      setError(respuestaUsuario.error.mensaje);
-      setCargando(false);
-      return;
-    }
+    const [respuestaLineas, respuestaParadas] = await Promise.all([
+      obtenerLineas(),
+      obtenerParadas(),
+    ]);
 
     if ('error' in respuestaLineas) {
       setError(respuestaLineas.error.mensaje);
@@ -92,27 +95,108 @@ export default function YoScreen() {
       return;
     }
 
-    const usuarioActual = respuestaUsuario.datos;
-    setUsuario(usuarioActual);
-
     setLineasFavoritas(
       respuestaLineas.datos.filter((linea) =>
-        usuarioActual.lineasFavoritas.includes(linea.id),
+        usuario.lineasFavoritas.includes(linea.id),
       ),
     );
 
     setParadasFavoritas(
       respuestaParadas.datos.filter((parada) =>
-        usuarioActual.paradasFavoritas.includes(parada.id),
+        usuario.paradasFavoritas.includes(parada.id),
       ),
     );
 
     setCargando(false);
-  }, []);
+  }, [usuario]);
 
   useEffect(() => {
-    cargarDatos();
-  }, [cargarDatos]);
+    cargarFavoritos();
+  }, [cargarFavoritos]);
+
+  if (!usuario) {
+    return (
+      <SafeAreaView
+        style={[estilos.contenedor, { backgroundColor: colores.fondo }]}
+        edges={['bottom']}
+      >
+        <ScrollView contentContainerStyle={estilos.scroll}>
+          <View
+            style={[
+              estilos.tarjetaUsuario,
+              { backgroundColor: colores.fondoSecundario },
+            ]}
+          >
+            <Text style={[estilos.nombre, { color: colores.texto }]}>
+              Sin sesión
+            </Text>
+            <Text style={[estilos.detalle, { color: colores.textoSecundario }]}>
+              Podés consultar líneas, paradas y avisos sin cuenta. Iniciá sesión
+              para ver favoritos y reportar demoras.
+            </Text>
+
+            <Text style={[estilos.seccionChica, { color: colores.texto }]}>
+              Apariencia
+            </Text>
+            <View style={estilos.filaTemas}>
+              <OpcionTema
+                etiqueta='Claro'
+                valor='claro'
+                seleccionado={preferencia === 'claro'}
+                onSeleccionar={setPreferencia}
+              />
+              <OpcionTema
+                etiqueta='Oscuro'
+                valor='oscuro'
+                seleccionado={preferencia === 'oscuro'}
+                onSeleccionar={setPreferencia}
+              />
+              <OpcionTema
+                etiqueta='Sistema'
+                valor='sistema'
+                seleccionado={preferencia === 'sistema'}
+                onSeleccionar={setPreferencia}
+              />
+            </View>
+
+            <Link href='/login' asChild>
+              <Pressable
+                accessibilityRole='button'
+                accessibilityLabel='Iniciar sesión'
+                style={({ pressed }) => [
+                  estilos.botonPrimario,
+                  {
+                    backgroundColor: colores.acento,
+                    opacity: pressed ? 0.9 : 1,
+                  },
+                ]}
+              >
+                <Text
+                  style={[
+                    estilos.botonPrimarioTexto,
+                    { color: colores.acentoTexto },
+                  ]}
+                >
+                  Iniciar sesión
+                </Text>
+              </Pressable>
+            </Link>
+
+            <Link href='/registro' asChild>
+              <Pressable
+                accessibilityRole='button'
+                accessibilityLabel='Crear cuenta'
+              >
+                <Text style={[estilos.enlace, { color: colores.acento }]}>
+                  Crear cuenta
+                </Text>
+              </Pressable>
+            </Link>
+          </View>
+        </ScrollView>
+      </SafeAreaView>
+    );
+  }
 
   if (cargando) {
     return (
@@ -128,15 +212,13 @@ export default function YoScreen() {
     );
   }
 
-  if (error || !usuario) {
+  if (error) {
     return (
       <SafeAreaView
         style={[estilos.centrado, { backgroundColor: colores.fondo }]}
         edges={['bottom']}
       >
-        <Text style={[estilos.error, { color: colores.error }]}>
-          {error ?? 'No se pudo cargar el usuario.'}
-        </Text>
+        <Text style={[estilos.error, { color: colores.error }]}>{error}</Text>
       </SafeAreaView>
     );
   }
@@ -188,19 +270,24 @@ export default function YoScreen() {
           </View>
 
           <Pressable
-            style={[
+            onPress={() => cerrarSesion()}
+            accessibilityRole='button'
+            accessibilityLabel='Cerrar sesión'
+            style={({ pressed }) => [
               estilos.botonSecundario,
-              { backgroundColor: colores.borde },
+              {
+                backgroundColor: colores.borde,
+                opacity: pressed ? 0.85 : 1,
+              },
             ]}
-            disabled
           >
             <Text
               style={[
                 estilos.botonSecundarioTexto,
-                { color: colores.textoSecundario },
+                { color: colores.texto },
               ]}
             >
-              Iniciar sesión (próximamente)
+              Cerrar sesión
             </Text>
           </Pressable>
         </View>
@@ -345,6 +432,23 @@ const estilos = StyleSheet.create({
     paddingVertical: 8,
     borderRadius: 999,
     borderWidth: 2,
+  },
+  botonPrimario: {
+    marginTop: 16,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 10,
+    alignItems: 'center',
+  },
+  botonPrimarioTexto: {
+    fontWeight: '700',
+    fontSize: 16,
+  },
+  enlace: {
+    marginTop: 12,
+    fontSize: 16,
+    fontWeight: '600',
+    textAlign: 'center',
   },
   botonSecundario: {
     marginTop: 8,
