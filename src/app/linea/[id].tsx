@@ -1,7 +1,9 @@
-import { Stack, useLocalSearchParams } from 'expo-router';
+import Ionicons from '@react-native-vector-icons/ionicons';
+import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
+  Pressable,
   ScrollView,
   StyleSheet,
   Text,
@@ -121,11 +123,47 @@ export default function LineaDetalleScreen() {
       style={[estilos.contenedor, { backgroundColor: colores.fondo }]}
       edges={['bottom']}
     >
-      <Stack.Screen options={{ title: `Línea ${linea.numero}` }} />
+      <Stack.Screen
+        options={{
+          title: `Línea ${linea.numero}`,
+          headerRight: () => (
+            <Pressable
+              onPress={() =>
+                router.push({
+                  pathname: '/acerca',
+                  params: {
+                    lineaNumero: linea.numero,
+                    lineaNombre: linea.nombre,
+                    empresa: linea.empresa,
+                  },
+                })
+              }
+              accessibilityRole='button'
+              accessibilityLabel='Más información sobre esta línea'
+              hitSlop={10}
+              style={estilos.botonHeader}
+            >
+              <Ionicons
+                name='information-circle-outline'
+                size={24}
+                color={colores.headerTexto}
+              />
+            </Pressable>
+          ),
+        }}
+      />
 
       <ScrollView contentContainerStyle={estilos.scroll}>
-        <View style={estilos.encabezado}>
-          <View style={[estilos.badge, { backgroundColor: linea.color }]}>
+        <View
+          accessible
+          accessibilityLabel={`Línea ${linea.numero}, ${linea.nombre}. Empresa ${linea.empresa}`}
+          style={estilos.encabezado}
+        >
+          <View
+            style={[estilos.badge, { backgroundColor: linea.color }]}
+            importantForAccessibility='no-hide-descendants'
+            accessibilityElementsHidden
+          >
             <Text style={estilos.numero}>{linea.numero}</Text>
           </View>
           <View style={estilos.encabezadoTexto}>
@@ -140,6 +178,8 @@ export default function LineaDetalleScreen() {
 
         {!linea.activa && (
           <View
+            accessibilityRole='alert'
+            accessibilityLabel='Línea inactiva'
             style={[
               estilos.alertaInactiva,
               { backgroundColor: colores.tarjetaAvisoSuspension },
@@ -154,6 +194,9 @@ export default function LineaDetalleScreen() {
         {avisos.map((aviso) => (
           <View
             key={aviso.id}
+            accessible
+            accessibilityRole='alert'
+            accessibilityLabel={`${aviso.titulo}. ${aviso.detalle}`}
             style={[
               estilos.alertaDesvio,
               { backgroundColor: colores.tarjetaAvisoDesvio },
@@ -183,8 +226,18 @@ export default function LineaDetalleScreen() {
               </Text>
             ) : (
               recorrido.paradas.map((parada, indice) => (
-                <View
+                <Pressable
                   key={parada.id}
+                  accessibilityRole='button'
+                  accessibilityLabel={`Parada ${indice + 1}, ${parada.nombre}${parada.refugio ? ', con refugio' : ''}`}
+                  accessibilityHint='Abre el detalle de la parada'
+                  hitSlop={8}
+                  onPress={() =>
+                    router.push({
+                      pathname: '/parada/[id]',
+                      params: { id: parada.id },
+                    })
+                  }
                   style={[
                     estilos.filaParada,
                     { borderBottomColor: colores.borde },
@@ -208,7 +261,7 @@ export default function LineaDetalleScreen() {
                       </Text>
                     )}
                   </View>
-                </View>
+                </Pressable>
               ))
             )}
           </View>
@@ -219,6 +272,10 @@ export default function LineaDetalleScreen() {
 }
 
 const estilos = StyleSheet.create({
+  botonHeader: {
+    marginRight: 8,
+    padding: 4,
+  },
   contenedor: {
     flex: 1,
   },

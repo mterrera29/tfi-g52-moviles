@@ -25,6 +25,7 @@ export default function TabsLayout() {
         name='lineas'
         options={{
           title: 'Líneas',
+          tabBarAccessibilityLabel: 'Líneas',
           tabBarIcon: ({ color, size }) => (
             <Ionicons name='bus' size={size} color={color} />
           ),
@@ -34,6 +35,7 @@ export default function TabsLayout() {
         name='paradas'
         options={{
           title: 'Paradas',
+          tabBarAccessibilityLabel: 'Paradas',
           tabBarIcon: ({ color, size }) => (
             <Ionicons name='location' size={size} color={color} />
           ),
@@ -43,6 +45,7 @@ export default function TabsLayout() {
         name='avisos'
         options={{
           title: 'Avisos',
+          tabBarAccessibilityLabel: 'Avisos',
           tabBarIcon: ({ color, size }) => (
             <Ionicons name='notifications' size={size} color={color} />
           ),
@@ -52,6 +55,7 @@ export default function TabsLayout() {
         name='yo'
         options={{
           title: 'Yo',
+          tabBarAccessibilityLabel: 'Perfil',
           tabBarIcon: ({ color, size }) => (
             <Ionicons name='person' size={size} color={color} />
           ),

@@ -1,13 +1,14 @@
-import { useWindowDimensions } from 'react-native';
+import { useState } from 'react';
+import { LayoutChangeEvent } from 'react-native';
 
-/**
- * Breakpoints alineados con U3 (diseño responsivo):
- * teléfono → 1 columna, pantalla media → 2, tablet → 3.
- */
 export function useColumnasLista() {
-  const { width } = useWindowDimensions();
+  const [ancho, setAncho] = useState(0);
 
-  const columnas = width >= 768 ? 3 : width >= 576 ? 2 : 1;
+  const columnas = ancho >= 900 ? 3 : ancho >= 768 ? 2 : 1;
 
-  return { width, columnas };
+  const onLayout = (evento: LayoutChangeEvent) => {
+    setAncho(evento.nativeEvent.layout.width);
+  };
+
+  return { ancho, columnas, onLayout };
 }

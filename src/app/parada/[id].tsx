@@ -112,7 +112,10 @@ export default function ParadaDetalleScreen() {
       <Stack.Screen options={{ title: parada.nombre }} />
 
       <ScrollView contentContainerStyle={estilos.scroll}>
-        <Text style={[estilos.subtitulo, { color: colores.textoSecundario }]}>
+        <Text
+          style={[estilos.subtitulo, { color: colores.textoSecundario }]}
+          accessibilityLabel={`${parada.refugio ? 'Con refugio' : 'Sin refugio'}. Sentido ${parada.sentido}`}
+        >
           {parada.refugio ? 'Con refugio' : 'Sin refugio'} · Sentido{' '}
           {parada.sentido}
         </Text>
@@ -124,6 +127,8 @@ export default function ParadaDetalleScreen() {
           {lineas.map((linea) => (
             <View
               key={linea.id}
+              accessible
+              accessibilityLabel={`Línea ${linea.numero}`}
               style={[estilos.badge, { backgroundColor: linea.color }]}
             >
               <Text style={estilos.badgeNumero}>{linea.numero}</Text>
@@ -136,7 +141,10 @@ export default function ParadaDetalleScreen() {
         </Text>
 
         {horarios.length === 0 ? (
-          <Text style={[estilos.mensaje, { color: colores.textoSecundario }]}>
+          <Text
+            style={[estilos.mensaje, { color: colores.textoSecundario }]}
+            accessibilityLiveRegion='polite'
+          >
             No hay más servicio hoy en esta parada.
           </Text>
         ) : (
@@ -146,6 +154,8 @@ export default function ParadaDetalleScreen() {
             return (
               <View
                 key={horario.id}
+                accessible
+                accessibilityLabel={`Línea ${linea?.numero ?? 'desconocida'}, según la tabla ${horario.hora}`}
                 style={[
                   estilos.filaHorario,
                   { borderBottomColor: colores.borde },
