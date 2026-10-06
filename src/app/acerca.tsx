@@ -1,11 +1,28 @@
-import { Stack, router, useLocalSearchParams } from 'expo-router';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { router, useLocalSearchParams } from 'expo-router';
+import { useCallback } from 'react';
+import {
+  Platform,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
+import { Gesture, GestureDetector } from 'react-native-gesture-handler';
+import Animated, {
+  runOnJS,
+  useAnimatedStyle,
+  useSharedValue,
+  withSpring,
+} from 'react-native-reanimated';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useTema } from '@/contextos/tema';
 
 export default function AcercaScreen() {
   const { colores } = useTema();
+  const insets = useSafeAreaInsets();
+  const esWeb = Platform.OS === 'web';
   const params = useLocalSearchParams<{
     lineaNumero?: string;
     lineaNombre?: string;
@@ -23,21 +40,68 @@ export default function AcercaScreen() {
     : params.empresa;
 
   const esDetalleLinea = Boolean(lineaNumero);
+  const desplazamiento = useSharedValue(0);
 
-  return (
-    <SafeAreaView
-      style={[estilos.contenedor, { backgroundColor: colores.fondo }]}
-      edges={['bottom']}
+  const cerrar = useCallback(() => {
+    router.back();
+  }, []);
+
+  const pan = Gesture.Pan()
+    .enabled(esWeb)
+    .activeOffsetY(12)
+    .failOffsetX([-24, 24])
+    .onUpdate((evento) => {
+      desplazamiento.value = Math.max(0, evento.translationY);
+    })
+    .onEnd((evento) => {
+      const alcanza = evento.translationY > 80 || evento.velocityY > 900;
+      if (alcanza) {
+        runOnJS(cerrar)();
+      } else {
+        desplazamiento.value = withSpring(0);
+      }
+    });
+
+  const estiloHoja = useAnimatedStyle(() => ({
+    transform: [{ translateY: desplazamiento.value }],
+  }));
+
+  const asaInterna = (
+    <View
+      accessible
+      accessibilityRole='adjustable'
+      accessibilityLabel='Cerrar deslizando hacia abajo'
+      accessibilityHint='Arrastrá hacia abajo para cerrar'
+      style={estilos.asa}
     >
-      <Stack.Screen options={{ title: 'Acerca de' }} />
+      <View style={[estilos.asaBarra, { backgroundColor: colores.borde }]} />
+    </View>
+  );
+
+  const asa = esWeb ? (
+    <GestureDetector gesture={pan}>{asaInterna}</GestureDetector>
+  ) : (
+    asaInterna
+  );
+
+  const hoja = (
+    <Animated.View
+      style={[
+        esWeb ? estilos.hojaWeb : estilos.hojaNativa,
+        {
+          backgroundColor: colores.fondo,
+          paddingBottom: Math.max(insets.bottom, 16),
+        },
+        estiloHoja,
+      ]}
+    >
+      {asa}
 
       <ScrollView contentContainerStyle={estilos.scroll}>
-        <Text style={[estilos.titulo, { color: colores.texto }]}>
-          Transporte Paraná
-        </Text>
+        <Text style={[estilos.titulo, { color: colores.texto }]}>Acerca de</Text>
         <Text style={[estilos.parrafo, { color: colores.textoSecundario }]}>
-          Información de la aplicación móvil para consultar líneas, paradas,
-          horarios según tabla y avisos de la Dirección de Transporte.
+          Transporte Paraná consulta líneas, paradas, horarios de tabla y avisos
+          de la Dirección de Transporte.
         </Text>
 
         {esDetalleLinea && (
@@ -75,7 +139,7 @@ export default function AcercaScreen() {
         </Text>
 
         <Pressable
-          onPress={() => router.back()}
+          onPress={cerrar}
           accessibilityRole='button'
           accessibilityLabel='Cerrar'
           style={({ pressed }) => [
@@ -91,16 +155,57 @@ export default function AcercaScreen() {
           </Text>
         </Pressable>
       </ScrollView>
-    </SafeAreaView>
+    </Animated.View>
+  );
+
+  if (!esWeb) {
+    return hoja;
+  }
+
+  return (
+    <View style={estilos.overlay}>
+      <Pressable
+        accessibilityRole='button'
+        accessibilityLabel='Cerrar'
+        onPress={cerrar}
+        style={estilos.fondoOscuro}
+      />
+      {hoja}
+    </View>
   );
 }
 
 const estilos = StyleSheet.create({
-  contenedor: {
+  overlay: {
+    flex: 1,
+    justifyContent: 'flex-end',
+  },
+  fondoOscuro: {
+    ...StyleSheet.absoluteFill,
+    backgroundColor: 'rgba(0, 0, 0, 0.4)',
+  },
+  hojaNativa: {
     flex: 1,
   },
+  hojaWeb: {
+    height: '50%',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+  },
+  asa: {
+    alignItems: 'center',
+    paddingTop: 10,
+    paddingBottom: 12,
+    minHeight: 44,
+  },
+  asaBarra: {
+    width: 40,
+    height: 5,
+    borderRadius: 999,
+  },
   scroll: {
-    padding: 20,
+    paddingHorizontal: 20,
+    paddingBottom: 8,
     gap: 12,
   },
   titulo: {
@@ -133,11 +238,13 @@ const estilos = StyleSheet.create({
     marginTop: 4,
   },
   boton: {
-    marginTop: 16,
+    marginTop: 8,
     alignSelf: 'flex-start',
     paddingHorizontal: 20,
     paddingVertical: 12,
     borderRadius: 10,
+    minHeight: 44,
+    justifyContent: 'center',
   },
   botonTexto: {
     fontSize: 16,

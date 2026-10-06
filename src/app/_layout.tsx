@@ -1,6 +1,8 @@
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
+import { Platform } from 'react-native';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 import { SesionProvider, useSesion } from '@/contextos/sesion';
 import { TemaProvider, useTema } from '@/contextos/tema';
@@ -32,8 +34,17 @@ function NavegacionConTema() {
         <Stack.Screen
           name='acerca'
           options={{
-            title: 'Acerca de',
-            presentation: 'modal',
+            headerShown: false,
+            presentation:
+              Platform.OS === 'web' ? 'transparentModal' : 'formSheet',
+            animation: 'slide_from_bottom',
+            sheetAllowedDetents: [0.5],
+            sheetGrabberVisible: true,
+            sheetCornerRadius: 20,
+            contentStyle: {
+              backgroundColor:
+                Platform.OS === 'web' ? 'transparent' : colores.fondo,
+            },
           }}
         />
 
@@ -48,10 +59,12 @@ function NavegacionConTema() {
 
 export default function RootLayout() {
   return (
-    <SesionProvider>
-      <TemaProvider preferenciaInicial='sistema'>
-        <NavegacionConTema />
-      </TemaProvider>
-    </SesionProvider>
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <SesionProvider>
+        <TemaProvider preferenciaInicial='sistema'>
+          <NavegacionConTema />
+        </TemaProvider>
+      </SesionProvider>
+    </GestureHandlerRootView>
   );
 }
