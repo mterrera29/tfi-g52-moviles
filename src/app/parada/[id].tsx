@@ -1,7 +1,9 @@
-import { Stack, useLocalSearchParams } from 'expo-router';
+import Ionicons from '@react-native-vector-icons/ionicons';
+import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { useQuery } from '@tanstack/react-query';
 import {
   ActivityIndicator,
+  Pressable,
   ScrollView,
   StyleSheet,
   Text,
@@ -9,6 +11,8 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { useSesion } from '@/contextos/sesion';
+import { useFavoritos } from '@/hooks/useFavoritos';
 import { useTema } from '@/contextos/tema';
 import { obtenerProximosHorariosPorParada } from '@/servicios/horarios';
 import { obtenerLineas } from '@/servicios/lineas';
@@ -18,6 +22,8 @@ import type { RespuestaError } from '@/tipos/api';
 
 export default function ParadaDetalleScreen() {
   const { colores } = useTema();
+  const { sesion } = useSesion();
+  const { usuario, actualizando, paradasFavoritas, alternarParadaFavorita, errorParada } = useFavoritos();
   const { id } = useLocalSearchParams<{ id: string }>();
   const paradaId = Array.isArray(id) ? id[0] : id;
 
@@ -37,6 +43,7 @@ export default function ParadaDetalleScreen() {
       };
     },
   });
+  const esFavorita = !!sesion && paradasFavoritas.includes(paradaId);
   const parada = data?.parada;
   const lineas = data?.lineas ?? [];
   const horarios = data?.horarios ?? [];
@@ -74,6 +81,28 @@ export default function ParadaDetalleScreen() {
       <Stack.Screen options={{ title: parada.nombre }} />
 
       <ScrollView contentContainerStyle={estilos.scroll}>
+        <Pressable
+          accessibilityRole='button'
+          accessibilityLabel={esFavorita ? 'Quitar de favoritos' : 'Agregar a favoritos'}
+          accessibilityState={{ selected: esFavorita, disabled: !!sesion && (!usuario || actualizando) }}
+          disabled={!!sesion && (!usuario || actualizando)}
+          onPress={() => {
+            if (!sesion) {
+              router.push('/login');
+              return;
+            }
+            alternarParadaFavorita(parada.id);
+          }}
+          style={{ alignSelf: 'flex-end', padding: 8 }}
+        >
+          <Ionicons name={esFavorita ? 'heart' : 'heart-outline'} size={28} color={colores.acento} />
+        </Pressable>
+        {errorParada && (
+          <Text accessibilityLiveRegion='polite' style={{ color: colores.error }}>
+            {errorParada.error.mensaje}
+          </Text>
+        )}
+
         <Text
           style={[estilos.subtitulo, { color: colores.textoSecundario }]}
           accessibilityLabel={`${parada.refugio ? 'Con refugio' : 'Sin refugio'}. Sentido ${parada.sentido}`}
