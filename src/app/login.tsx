@@ -65,7 +65,7 @@ export default function LoginScreen() {
             Transporte Paraná
           </Text>
           <Text style={[estilos.ayuda, { color: colores.textoSecundario }]}>
-            Prueba: matias@ejemplo.com / 12345678
+            Ingresá con tu email y contraseña.
           </Text>
 
           <Text style={[estilos.etiqueta, { color: colores.texto }]}>Email</Text>

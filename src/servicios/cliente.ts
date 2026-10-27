@@ -2,15 +2,15 @@ import axios from 'axios';
 import type { RespuestaError } from '@/tipos/api';
 
 let tokenActual: string | null = null;
-let alCerrarSesion: (() => void) | null = null;
+let alCerrarSesion: (() => Promise<void>) | null = null;
 
-// Queda sólo en memoria hasta que agreguemos persistencia de sesión.
+// Copia en memoria del token restaurado desde SecureStore.
 export function establecerToken(token: string | null): void {
   tokenActual = token;
 }
 
-// Dejá acá el cierre de sesión cuando conectemos el contexto (U05.T01 diap. 12).
-export function establecerAlCerrarSesion(funcion: (() => void) | null): void {
+// El contexto conecta el cierre centralizado (U05.T01 diap. 12).
+export function establecerAlCerrarSesion(funcion: (() => Promise<void>) | null): void {
   alCerrarSesion = funcion;
 }
 
@@ -63,12 +63,18 @@ export function normalizarError(error: unknown): RespuestaError {
 
 cliente.interceptors.response.use(
   (respuesta) => respuesta,
-  (error: unknown) => {
-    if (axios.isAxiosError(error) && error.response?.status === 401) {
-      // Limpiamos el token para no volver a mandarlo (U05.T01 diap. 12).
+  async (error: unknown) => {
+    const respuesta = normalizarError(error);
+    // Un 401 en un solo lado (U05.T01 diap. 12). El login con clave mala
+    // también devuelve 401 (CREDENCIALES_INVALIDAS) y ahí no hay sesión que cerrar.
+    if (
+      axios.isAxiosError(error) &&
+      error.response?.status === 401 &&
+      respuesta.error.codigo !== 'CREDENCIALES_INVALIDAS'
+    ) {
       establecerToken(null);
-      alCerrarSesion?.();
+      await alCerrarSesion?.();
     }
-    return Promise.reject(normalizarError(error));
+    return Promise.reject(respuesta);
   },
 );

@@ -62,7 +62,7 @@ function OpcionTema({
 
 export default function YoScreen() {
   const { colores, preferencia, setPreferencia } = useTema();
-  const { sesion, cerrarSesion } = useSesion();
+  const { sesion, errorCierre, cerrarSesion } = useSesion();
   const usuario = sesion?.usuario ?? null;
   const [lineasFavoritas, setLineasFavoritas] = useState<Linea[]>([]);
   const [paradasFavoritas, setParadasFavoritas] = useState<Parada[]>([]);
@@ -123,6 +123,26 @@ export default function YoScreen() {
             <Text style={[estilos.nombre, { color: colores.texto }]}>
               Sin sesión
             </Text>
+            {errorCierre && (
+              <View style={{ gap: 8 }}>
+                <Text
+                  style={[estilos.error, { color: colores.error }]}
+                  accessibilityLiveRegion='polite'
+                >
+                  {errorCierre}
+                </Text>
+                <Pressable
+                  onPress={() => cerrarSesion()}
+                  accessibilityRole='button'
+                  accessibilityLabel='Reintentar cierre de sesión'
+                  style={[estilos.botonSecundario, { backgroundColor: colores.borde }]}
+                >
+                  <Text style={[estilos.botonSecundarioTexto, { color: colores.texto }]}>
+                    Reintentar cierre de sesión
+                  </Text>
+                </Pressable>
+              </View>
+            )}
             <Text style={[estilos.detalle, { color: colores.textoSecundario }]}>
               Podés consultar líneas, paradas y avisos sin cuenta. Iniciá sesión
               para ver favoritos y reportar demoras.

@@ -1,5 +1,5 @@
-import { focusManager, QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { Stack } from 'expo-router';
+import { focusManager, QueryClientProvider } from '@tanstack/react-query';
+import { SplashScreen, Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
 import { AppState, Platform } from 'react-native';
@@ -7,21 +7,26 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 import { SesionProvider, useSesion } from '@/contextos/sesion';
 import { TemaProvider, useTema } from '@/contextos/tema';
+import { queryClient } from '@/servicios/queryClient';
 
-// Una caché estable para la app (U05.T01 diap. 22).
-const queryClient = new QueryClient({
-  defaultOptions: { queries: { staleTime: 60_000, retry: 2 } },
-});
+// Se mantiene el splash hasta restaurar la sesión (U3.Nav diap. 17).
+void SplashScreen.preventAutoHideAsync().catch(() => {});
 
 function NavegacionConTema() {
   const { colores, modo, setPreferencia } = useTema();
-  const { sesion } = useSesion();
+  const { sesion, restaurando } = useSesion();
+
+  useEffect(() => {
+    if (!restaurando) void SplashScreen.hideAsync().catch(() => {});
+  }, [restaurando]);
 
   useEffect(() => {
     if (sesion?.usuario) {
       setPreferencia(sesion.usuario.tema);
     }
   }, [sesion?.usuario, setPreferencia]);
+
+  if (restaurando) return null;
 
   return (
     <>
