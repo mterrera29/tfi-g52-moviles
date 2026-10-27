@@ -1,5 +1,5 @@
 import { Stack, useLocalSearchParams } from 'expo-router';
-import { useCallback, useEffect, useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import {
   ActivityIndicator,
   ScrollView,
@@ -13,71 +13,35 @@ import { useTema } from '@/contextos/tema';
 import { obtenerProximosHorariosPorParada } from '@/servicios/horarios';
 import { obtenerLineas } from '@/servicios/lineas';
 import { obtenerParadaPorId } from '@/servicios/paradas';
-import type { Horario } from '@/tipos/horario';
-import type { Linea } from '@/tipos/linea';
-import type { Parada } from '@/tipos/parada';
+import { EstadoError } from '@/componentes/EstadoError';
+import type { RespuestaError } from '@/tipos/api';
 
 export default function ParadaDetalleScreen() {
   const { colores } = useTema();
   const { id } = useLocalSearchParams<{ id: string }>();
   const paradaId = Array.isArray(id) ? id[0] : id;
 
-  const [parada, setParada] = useState<Parada | null>(null);
-  const [lineas, setLineas] = useState<Linea[]>([]);
-  const [horarios, setHorarios] = useState<Horario[]>([]);
-  const [cargando, setCargando] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  const cargarDetalle = useCallback(async () => {
-    if (!paradaId) {
-      setError('No se indicó qué parada abrir.');
-      setCargando(false);
-      return;
-    }
-
-    setCargando(true);
-    setError(null);
-
-    const [respuestaParada, respuestaLineas, respuestaHorarios] =
-      await Promise.all([
+  const { data, isPending, error, refetch } = useQuery({
+    queryKey: ['parada', paradaId, 'proximos', 3],
+    queryFn: async () => {
+      if (!paradaId) throw { error: { codigo: 'VALIDACION_FALLIDA', mensaje: 'No se indicó qué parada abrir.' } };
+      const [respuestaParada, respuestaLineas, respuestaHorarios] = await Promise.all([
         obtenerParadaPorId(paradaId),
         obtenerLineas(),
-        obtenerProximosHorariosPorParada(paradaId),
+        obtenerProximosHorariosPorParada(paradaId, 3),
       ]);
+      return {
+        parada: respuestaParada.datos,
+        lineas: respuestaLineas.datos.filter((linea) => respuestaParada.datos.lineaIds.includes(linea.id)),
+        horarios: respuestaHorarios.datos,
+      };
+    },
+  });
+  const parada = data?.parada;
+  const lineas = data?.lineas ?? [];
+  const horarios = data?.horarios ?? [];
 
-    if ('error' in respuestaParada) {
-      setError(respuestaParada.error.mensaje);
-      setCargando(false);
-      return;
-    }
-
-    if ('error' in respuestaLineas) {
-      setError(respuestaLineas.error.mensaje);
-      setCargando(false);
-      return;
-    }
-
-    if ('error' in respuestaHorarios) {
-      setError(respuestaHorarios.error.mensaje);
-      setCargando(false);
-      return;
-    }
-
-    setParada(respuestaParada.datos);
-    setLineas(
-      respuestaLineas.datos.filter((linea) =>
-        respuestaParada.datos.lineaIds.includes(linea.id),
-      ),
-    );
-    setHorarios(respuestaHorarios.datos);
-    setCargando(false);
-  }, [paradaId]);
-
-  useEffect(() => {
-    cargarDetalle();
-  }, [cargarDetalle]);
-
-  if (cargando) {
+  if (isPending) {
     return (
       <SafeAreaView
         style={[estilos.centrado, { backgroundColor: colores.fondo }]}
@@ -97,9 +61,7 @@ export default function ParadaDetalleScreen() {
         style={[estilos.centrado, { backgroundColor: colores.fondo }]}
         edges={['bottom']}
       >
-        <Text style={[estilos.error, { color: colores.error }]}>
-          {error ?? 'No se pudo cargar la parada.'}
-        </Text>
+        <EstadoError mensaje={error ? (error as unknown as RespuestaError).error.mensaje : 'No se pudo cargar la parada.'} onReintentar={() => { void refetch(); }} />
       </SafeAreaView>
     );
   }
@@ -124,6 +86,7 @@ export default function ParadaDetalleScreen() {
           Líneas que paran acá
         </Text>
         <View style={estilos.lineasFila}>
+          {lineas.length === 0 && <Text style={{ color: colores.textoSecundario }}>No hay líneas para esta parada.</Text>}
           {lineas.map((linea) => (
             <View
               key={linea.id}
@@ -145,15 +108,16 @@ export default function ParadaDetalleScreen() {
             style={[estilos.mensaje, { color: colores.textoSecundario }]}
             accessibilityLiveRegion='polite'
           >
-            No hay más servicio hoy en esta parada.
+            No hay próximos servicios para esta parada.
           </Text>
         ) : (
-          horarios.map((horario) => {
+          horarios.map((horario, indice) => {
             const linea = lineas.find((item) => item.id === horario.lineaId);
+            // Sin fecha de servicio no podemos distinguir hoy de mañana ni prometer minutos.
 
             return (
               <View
-                key={horario.id}
+                key={`${horario.id}-${indice}`}
                 accessible
                 accessibilityLabel={`Línea ${linea?.numero ?? 'desconocida'}, según la tabla ${horario.hora}`}
                 style={[
@@ -239,9 +203,5 @@ const estilos = StyleSheet.create({
   },
   mensaje: {
     fontSize: 15,
-  },
-  error: {
-    fontSize: 16,
-    textAlign: 'center',
   },
 });

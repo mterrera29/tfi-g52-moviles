@@ -12,6 +12,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { useSesion } from '@/contextos/sesion';
 import { useTema } from '@/contextos/tema';
+import { normalizarError } from '@/servicios/cliente';
 import { obtenerLineas } from '@/servicios/lineas';
 import { obtenerParadas } from '@/servicios/paradas';
 import type { Linea } from '@/tipos/linea';
@@ -78,36 +79,28 @@ export default function YoScreen() {
     setCargando(true);
     setError(null);
 
-    const [respuestaLineas, respuestaParadas] = await Promise.all([
-      obtenerLineas(),
-      obtenerParadas(),
-    ]);
+    try {
+      const [respuestaLineas, respuestaParadas] = await Promise.all([
+        obtenerLineas(),
+        obtenerParadas(),
+      ]);
 
-    if ('error' in respuestaLineas) {
-      setError(respuestaLineas.error.mensaje);
+      setLineasFavoritas(
+        respuestaLineas.datos.filter((linea) =>
+          usuario.lineasFavoritas.includes(linea.id),
+        ),
+      );
+
+      setParadasFavoritas(
+        respuestaParadas.datos.filter((parada) =>
+          usuario.paradasFavoritas.includes(parada.id),
+        ),
+      );
+    } catch (error: unknown) {
+      setError(normalizarError(error).error.mensaje);
+    } finally {
       setCargando(false);
-      return;
     }
-
-    if ('error' in respuestaParadas) {
-      setError(respuestaParadas.error.mensaje);
-      setCargando(false);
-      return;
-    }
-
-    setLineasFavoritas(
-      respuestaLineas.datos.filter((linea) =>
-        usuario.lineasFavoritas.includes(linea.id),
-      ),
-    );
-
-    setParadasFavoritas(
-      respuestaParadas.datos.filter((parada) =>
-        usuario.paradasFavoritas.includes(parada.id),
-      ),
-    );
-
-    setCargando(false);
   }, [usuario]);
 
   useEffect(() => {

@@ -1,67 +1,23 @@
-import { horariosMock } from '@/mocks/horarios';
+import { cliente } from '@/servicios/cliente';
 import type { Horario, TipoDeDia } from '@/tipos/horario';
-import type { RespuestaError, RespuestaExito } from '@/tipos/linea';
+import type { RespuestaLista } from '@/tipos/api';
 
-const esperar = (ms = 300) => new Promise((resolve) => setTimeout(resolve, ms));
-
-function ordenarPorHora(horarios: Horario[]) {
-  return [...horarios].sort((a, b) => a.hora.localeCompare(b.hora));
-}
-
-export async function obtenerHorariosPorParada(
+export function obtenerHorariosPorParada(
   paradaId: string,
   tipoDeDia: TipoDeDia = 'habil',
-): Promise<RespuestaExito<Horario[]> | RespuestaError> {
-  await esperar();
-
-  const horarios = ordenarPorHora(
-    horariosMock.filter(
-      (horario) =>
-        horario.paradaId === paradaId && horario.tipoDeDia === tipoDeDia,
-    ),
-  );
-
-  return {
-    datos: horarios,
-    meta: {
-      total: horarios.length,
-      pagina: 1,
-      porPagina: horarios.length,
-    },
-  };
+): Promise<RespuestaLista<Horario>> {
+  return cliente.get<RespuestaLista<Horario>>('/horarios', {
+    params: { paradaId, tipoDeDia, porPagina: 5000 },
+  }).then((r) => r.data);
 }
 
-export async function obtenerProximosHorariosPorParada(
+export function obtenerProximosHorariosPorParada(
   paradaId: string,
   cantidad = 3,
-  tipoDeDia: TipoDeDia = 'habil',
-): Promise<RespuestaExito<Horario[]> | RespuestaError> {
-  const respuesta = await obtenerHorariosPorParada(paradaId, tipoDeDia);
-
-  if ('error' in respuesta) {
-    return respuesta;
-  }
-
-  const ahora = new Date();
-  const minutosActuales = ahora.getHours() * 60 + ahora.getMinutes();
-
-  const proximos = respuesta.datos.filter((horario) => {
-    const [horas, minutos] = horario.hora.split(':').map(Number);
-    const minutosHorario = horas * 60 + minutos;
-    return minutosHorario >= minutosActuales;
-  });
-
-  const seleccionados =
-    proximos.length > 0
-      ? proximos.slice(0, cantidad)
-      : respuesta.datos.slice(0, cantidad);
-
-  return {
-    datos: seleccionados,
-    meta: {
-      total: seleccionados.length,
-      pagina: 1,
-      porPagina: seleccionados.length,
-    },
-  };
+  lineaId?: string,
+): Promise<RespuestaLista<Horario>> {
+  // La API elige los próximos y resuelve el cambio de día; no lo duplicamos acá.
+  return cliente.get<RespuestaLista<Horario>>(`/paradas/${encodeURIComponent(paradaId)}/proximos`, {
+    params: { cantidad, lineaId },
+  }).then((r) => r.data);
 }

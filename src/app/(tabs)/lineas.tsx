@@ -1,10 +1,9 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import {
   ActivityIndicator,
   FlatList,
   StyleSheet,
   Text,
-  View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -12,37 +11,21 @@ import { FilaLinea } from '@/componentes/FilaLinea';
 import { useTema } from '@/contextos/tema';
 import { useColumnasLista } from '@/hooks/useColumnasLista';
 import { obtenerLineas } from '@/servicios/lineas';
-import type { Linea } from '@/tipos/linea';
+import type { RespuestaError } from '@/tipos/api';
+import { EstadoError } from '@/componentes/EstadoError';
 
 export default function LineasScreen() {
   const { colores } = useTema();
   const { columnas, onLayout } = useColumnasLista();
-  const [lineas, setLineas] = useState<Linea[]>([]);
-  const [cargando, setCargando] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  // La clave identifica la copia en caché (U05.T01 diap. 18).
+  const { data, isPending, error, refetch } = useQuery<Awaited<ReturnType<typeof obtenerLineas>>, RespuestaError>({
+    queryKey: ['lineas'],
+    queryFn: obtenerLineas,
+  });
+  const lineas = data?.datos ?? [];
   const esGrilla = columnas > 1;
 
-  const cargarLineas = useCallback(async () => {
-    setCargando(true);
-    setError(null);
-
-    const respuesta = await obtenerLineas();
-
-    if ('error' in respuesta) {
-      setError(respuesta.error.mensaje);
-      setLineas([]);
-    } else {
-      setLineas(respuesta.datos);
-    }
-
-    setCargando(false);
-  }, []);
-
-  useEffect(() => {
-    cargarLineas();
-  }, [cargarLineas]);
-
-  if (cargando) {
+  if (isPending) {
     return (
       <SafeAreaView
         style={[estilos.centrado, { backgroundColor: colores.fondo }]}
@@ -64,12 +47,10 @@ export default function LineasScreen() {
         style={[estilos.centrado, { backgroundColor: colores.fondo }]}
         edges={['bottom']}
       >
-        <Text
-          style={[estilos.error, { color: colores.error }]}
-          accessibilityRole='alert'
-        >
-          {error}
-        </Text>
+        <EstadoError
+          mensaje={error.error.mensaje}
+          onReintentar={() => { void refetch(); }}
+        />
       </SafeAreaView>
     );
   }
@@ -116,5 +97,4 @@ const estilos = StyleSheet.create({
   filaGrilla: {
     gap: 8,
   },
-  error: { fontSize: 16, textAlign: 'center' },
 });

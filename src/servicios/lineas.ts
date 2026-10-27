@@ -1,44 +1,12 @@
-import { lineasMock } from '@/mocks/lineas';
-import type { Linea, RespuestaError, RespuestaExito } from '@/tipos/linea';
+import { cliente } from '@/servicios/cliente';
+import type { Linea } from '@/tipos/linea';
+import type { RespuestaLista, RespuestaUno } from '@/tipos/api';
 
-const esperar = (ms = 400) => new Promise((resolve) => setTimeout(resolve, ms));
-
-export async function obtenerLineas(): Promise<
-  RespuestaExito<Linea[]> | RespuestaError
-> {
-  await esperar();
-
-  return {
-    datos: lineasMock,
-    meta: {
-      total: lineasMock.length,
-      pagina: 1,
-      porPagina: 20,
-    },
-  };
+// Un solo cliente para toda la app (U05.T01 diap. 11).
+export function obtenerLineas(): Promise<RespuestaLista<Linea>> {
+  return cliente.get<RespuestaLista<Linea>>('/lineas', { params: { porPagina: 100 } }).then((r) => r.data);
 }
-export async function obtenerLineaPorId(
-  id: string,
-): Promise<RespuestaExito<Linea> | RespuestaError> {
-  await esperar();
 
-  const linea = lineasMock.find((item) => item.id === id);
-
-  if (!linea) {
-    return {
-      error: {
-        codigo: 'LINEA_NO_ENCONTRADA',
-        mensaje: 'No existe esa línea.',
-      },
-    };
-  }
-
-  return {
-    datos: linea,
-    meta: {
-      total: 1,
-      pagina: 1,
-      porPagina: 1,
-    },
-  };
+export function obtenerLineaPorId(id: string): Promise<RespuestaUno<Linea>> {
+  return cliente.get<RespuestaUno<Linea>>(`/lineas/${encodeURIComponent(id)}`).then((r) => r.data);
 }

@@ -1,5 +1,6 @@
-import { router, useFocusEffect } from 'expo-router';
-import { useCallback, useMemo, useState } from 'react';
+import { router } from 'expo-router';
+import { useMemo, useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import {
   ActivityIndicator,
   FlatList,
@@ -16,38 +17,19 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTema } from '@/contextos/tema';
 import { useColumnasLista } from '@/hooks/useColumnasLista';
 import { obtenerParadas } from '@/servicios/paradas';
-import type { Parada } from '@/tipos/parada';
+import type { RespuestaError } from '@/tipos/api';
+import { EstadoError } from '@/componentes/EstadoError';
 
 export default function ParadasScreen() {
   const { colores } = useTema();
   const { columnas, onLayout } = useColumnasLista();
-  const [paradas, setParadas] = useState<Parada[]>([]);
   const [busqueda, setBusqueda] = useState('');
-  const [cargando, setCargando] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const { data, isPending, error, refetch, isRefetching } = useQuery<Awaited<ReturnType<typeof obtenerParadas>>, RespuestaError>({
+    queryKey: ['paradas'],
+    queryFn: () => obtenerParadas(),
+  });
+  const paradas = data?.datos ?? [];
   const esGrilla = columnas > 1;
-
-  const cargarParadas = useCallback(async () => {
-    setCargando(true);
-    setError(null);
-
-    const respuesta = await obtenerParadas();
-
-    if ('error' in respuesta) {
-      setError(respuesta.error.mensaje);
-      setParadas([]);
-    } else {
-      setParadas(respuesta.datos);
-    }
-
-    setCargando(false);
-  }, []);
-
-  useFocusEffect(
-    useCallback(() => {
-      cargarParadas();
-    }, [cargarParadas]),
-  );
 
   const paradasFiltradas = useMemo(() => {
     const texto = busqueda.trim().toLowerCase();
@@ -61,7 +43,7 @@ export default function ParadasScreen() {
     );
   }, [busqueda, paradas]);
 
-  if (cargando) {
+  if (isPending) {
     return (
       <SafeAreaView
         style={[estilos.centrado, { backgroundColor: colores.fondo }]}
@@ -85,12 +67,10 @@ export default function ParadasScreen() {
         style={[estilos.centrado, { backgroundColor: colores.fondo }]}
         edges={['bottom']}
       >
-        <Text
-          style={[estilos.error, { color: colores.error }]}
-          accessibilityRole='alert'
-        >
-          {error}
-        </Text>
+        <EstadoError
+          mensaje={error.error.mensaje}
+          onReintentar={() => { void refetch(); }}
+        />
       </SafeAreaView>
     );
   }
@@ -139,8 +119,8 @@ export default function ParadasScreen() {
           ? { numColumns: columnas, columnWrapperStyle: estilos.filaGrilla }
           : {})}
         keyExtractor={(item) => item.id}
-        refreshing={cargando}
-        onRefresh={cargarParadas}
+        refreshing={isRefetching}
+        onRefresh={() => { void refetch(); }}
         contentContainerStyle={esGrilla ? estilos.contenidoGrilla : undefined}
         renderItem={({ item }) => (
           <Pressable
@@ -246,9 +226,5 @@ const estilos = StyleSheet.create({
   },
   mensaje: {
     fontSize: 16,
-  },
-  error: {
-    fontSize: 16,
-    textAlign: 'center',
   },
 });

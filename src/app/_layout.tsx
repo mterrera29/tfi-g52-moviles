@@ -1,11 +1,17 @@
+import { focusManager, QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
-import { Platform } from 'react-native';
+import { AppState, Platform } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 import { SesionProvider, useSesion } from '@/contextos/sesion';
 import { TemaProvider, useTema } from '@/contextos/tema';
+
+// Una caché estable para la app (U05.T01 diap. 22).
+const queryClient = new QueryClient({
+  defaultOptions: { queries: { staleTime: 60_000, retry: 2 } },
+});
 
 function NavegacionConTema() {
   const { colores, modo, setPreferencia } = useTema();
@@ -58,13 +64,23 @@ function NavegacionConTema() {
 }
 
 export default function RootLayout() {
+  useEffect(() => {
+    // En móvil el foco lo marca AppState, no una ventana (U05.T01 diap. 22).
+    const suscripcion = AppState.addEventListener('change', (estado) => {
+      focusManager.setFocused(estado === 'active');
+    });
+    return () => suscripcion.remove();
+  }, []);
+
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
-      <SesionProvider>
-        <TemaProvider preferenciaInicial='sistema'>
-          <NavegacionConTema />
-        </TemaProvider>
-      </SesionProvider>
+      <QueryClientProvider client={queryClient}>
+        <SesionProvider>
+          <TemaProvider preferenciaInicial='sistema'>
+            <NavegacionConTema />
+          </TemaProvider>
+        </SesionProvider>
+      </QueryClientProvider>
     </GestureHandlerRootView>
   );
 }
