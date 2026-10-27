@@ -5,6 +5,7 @@ import { useEffect } from 'react';
 import { AppState, Platform } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
+import { PantallaBloqueo } from '@/componentes/PantallaBloqueo';
 import { SesionProvider, useSesion } from '@/contextos/sesion';
 import { TemaProvider, useTema } from '@/contextos/tema';
 import { queryClient } from '@/servicios/queryClient';
@@ -14,7 +15,7 @@ void SplashScreen.preventAutoHideAsync().catch(() => {});
 
 function NavegacionConTema() {
   const { colores, modo, setPreferencia } = useTema();
-  const { sesion, restaurando } = useSesion();
+  const { sesion, restaurando, bloqueada } = useSesion();
 
   useEffect(() => {
     if (!restaurando) void SplashScreen.hideAsync().catch(() => {});
@@ -31,39 +32,43 @@ function NavegacionConTema() {
   return (
     <>
       <StatusBar style={modo === 'oscuro' ? 'light' : 'dark'} />
-      <Stack
-        screenOptions={{
-          headerStyle: { backgroundColor: colores.headerFondo },
-          headerTintColor: colores.headerTexto,
-          contentStyle: { backgroundColor: colores.fondo },
-        }}
-      >
-        <Stack.Screen name='index' options={{ headerShown: false }} />
-        <Stack.Screen name='(tabs)' options={{ headerShown: false }} />
-        <Stack.Screen name='linea/[id]' options={{ title: 'Línea' }} />
-        <Stack.Screen name='parada/[id]' options={{ title: 'Parada' }} />
-        <Stack.Screen
-          name='acerca'
-          options={{
-            headerShown: false,
-            presentation:
-              Platform.OS === 'web' ? 'transparentModal' : 'formSheet',
-            animation: 'slide_from_bottom',
-            sheetAllowedDetents: [0.5],
-            sheetGrabberVisible: true,
-            sheetCornerRadius: 20,
-            contentStyle: {
-              backgroundColor:
-                Platform.OS === 'web' ? 'transparent' : colores.fondo,
-            },
+      {bloqueada ? (
+        <PantallaBloqueo />
+      ) : (
+        <Stack
+          screenOptions={{
+            headerStyle: { backgroundColor: colores.headerFondo },
+            headerTintColor: colores.headerTexto,
+            contentStyle: { backgroundColor: colores.fondo },
           }}
-        />
+        >
+          <Stack.Screen name='index' options={{ headerShown: false }} />
+          <Stack.Screen name='(tabs)' options={{ headerShown: false }} />
+          <Stack.Screen name='linea/[id]' options={{ title: 'Línea' }} />
+          <Stack.Screen name='parada/[id]' options={{ title: 'Parada' }} />
+          <Stack.Screen
+            name='acerca'
+            options={{
+              headerShown: false,
+              presentation:
+                Platform.OS === 'web' ? 'transparentModal' : 'formSheet',
+              animation: 'slide_from_bottom',
+              sheetAllowedDetents: [0.5],
+              sheetGrabberVisible: true,
+              sheetCornerRadius: 20,
+              contentStyle: {
+                backgroundColor:
+                  Platform.OS === 'web' ? 'transparent' : colores.fondo,
+              },
+            }}
+          />
 
-        <Stack.Protected guard={!sesion}>
-          <Stack.Screen name='login' options={{ title: 'Iniciar sesión' }} />
-          <Stack.Screen name='registro' options={{ title: 'Crear cuenta' }} />
-        </Stack.Protected>
-      </Stack>
+          <Stack.Protected guard={!sesion}>
+            <Stack.Screen name='login' options={{ title: 'Iniciar sesión' }} />
+            <Stack.Screen name='registro' options={{ title: 'Crear cuenta' }} />
+          </Stack.Protected>
+        </Stack>
+      )}
     </>
   );
 }

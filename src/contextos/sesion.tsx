@@ -15,14 +15,19 @@ import {
   obtenerSesion,
   registrar as registrarServicio,
 } from '@/servicios/auth';
+import { biometriaDisponible, pedirBiometria } from '@/servicios/biometria';
 import { establecerAlCerrarSesion, establecerToken } from '@/servicios/cliente';
 import { queryClient } from '@/servicios/queryClient';
+import { borrarToken, leerToken } from '@/servicios/token';
 import type { DatosLogin, DatosRegistro } from '@/esquemas/auth';
 import type { RespuestaError, Sesion } from '@/tipos/api';
 
 type SesionContextoValor = {
   sesion: Sesion | null;
   restaurando: boolean;
+  bloqueada: boolean;
+  reintentarBiometria: () => Promise<void>;
+  ingresarConContrasena: () => Promise<void>;
   errorCierre: string | null;
   iniciarSesion: (datos: DatosLogin) => Promise<RespuestaError['error'] | null>;
   registrar: (datos: DatosRegistro) => Promise<RespuestaError['error'] | null>;
@@ -31,9 +36,22 @@ type SesionContextoValor = {
 
 const SesionContexto = createContext<SesionContextoValor | null>(null);
 
+async function restaurarSesionGuardada() {
+  try {
+    const token = await leerToken();
+    if (token && (await biometriaDisponible()) && !(await pedirBiometria())) {
+      return 'bloqueada' as const;
+    }
+  } catch {
+    return 'bloqueada' as const;
+  }
+  return obtenerSesion();
+}
+
 export function SesionProvider({ children }: { children: ReactNode }) {
   const [sesion, setSesion] = useState<Sesion | null>(null);
   const [restaurando, setRestaurando] = useState(true);
+  const [bloqueada, setBloqueada] = useState(false);
   const [errorCierre, setErrorCierre] = useState<string | null>(null);
   const sesionActual = useRef<Sesion | null>(null);
 
@@ -61,8 +79,13 @@ export function SesionProvider({ children }: { children: ReactNode }) {
     });
 
     async function restaurar() {
-      const respuesta = await obtenerSesion();
+      const respuesta = await restaurarSesionGuardada();
       if (!vigente) return;
+      if (respuesta === 'bloqueada') {
+        setBloqueada(true);
+        setRestaurando(false);
+        return;
+      }
       actualizarSesion(respuesta && !('error' in respuesta) ? respuesta : null);
       setRestaurando(false);
     }
@@ -73,6 +96,22 @@ export function SesionProvider({ children }: { children: ReactNode }) {
       establecerAlCerrarSesion(null);
     };
   }, [actualizarSesion, cerrarSesion]);
+
+  const reintentarBiometria = useCallback(async () => {
+    setRestaurando(true);
+    const respuesta = await restaurarSesionGuardada();
+    setBloqueada(respuesta === 'bloqueada');
+    if (respuesta !== 'bloqueada') {
+      actualizarSesion(respuesta && !('error' in respuesta) ? respuesta : null);
+    }
+    setRestaurando(false);
+  }, [actualizarSesion]);
+
+  const ingresarConContrasena = useCallback(async () => {
+    await borrarToken();
+    establecerToken(null);
+    setBloqueada(false);
+  }, []);
 
   const iniciarSesion = useCallback(async (datos: DatosLogin) => {
     const respuesta = await iniciarSesionServicio(datos);
@@ -91,8 +130,18 @@ export function SesionProvider({ children }: { children: ReactNode }) {
   }, [actualizarSesion]);
 
   const valor = useMemo(
-    () => ({ sesion, restaurando, errorCierre, iniciarSesion, registrar, cerrarSesion }),
-    [sesion, restaurando, errorCierre, iniciarSesion, registrar, cerrarSesion],
+    () => ({
+      sesion,
+      restaurando,
+      bloqueada,
+      reintentarBiometria,
+      ingresarConContrasena,
+      errorCierre,
+      iniciarSesion,
+      registrar,
+      cerrarSesion,
+    }),
+    [sesion, restaurando, bloqueada, reintentarBiometria, ingresarConContrasena, errorCierre, iniciarSesion, registrar, cerrarSesion],
   );
 
   return <SesionContexto.Provider value={valor}>{children}</SesionContexto.Provider>;
