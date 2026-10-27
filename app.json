@@ -13,7 +13,14 @@
     },
     "plugins": [
       "expo-router",
-      "@react-native-vector-icons/ionicons"
+      "@react-native-vector-icons/ionicons",
+      "expo-secure-store",
+      [
+        "expo-local-authentication",
+        {
+          "faceIDPermission": "Usamos Face ID para reingresar a tu cuenta"
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true

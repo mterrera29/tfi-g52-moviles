@@ -27,6 +27,7 @@ export default function RegistroScreen() {
   const {
     control,
     handleSubmit,
+    setError,
     formState: { errors },
   } = useForm<DatosRegistro>({
     resolver: zodResolver(esquemaRegistro),
@@ -42,7 +43,11 @@ export default function RegistroScreen() {
     setEnviando(false);
 
     if (error) {
-      setErrorServicio(error.mensaje);
+      if (error.codigo === 'EMAIL_YA_REGISTRADO') {
+        setError('email', { type: 'servidor', message: error.mensaje });
+      } else {
+        setErrorServicio(error.mensaje);
+      }
       return;
     }
 

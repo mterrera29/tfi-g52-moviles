@@ -22,18 +22,5 @@ export interface Linea {
   activa: boolean;
 }
 
-export interface RespuestaExito<T> {
-  datos: T;
-  meta: {
-    total: number;
-    pagina: number;
-    porPagina: number;
-  };
-}
-
-export interface RespuestaError {
-  error: {
-    codigo: string;
-    mensaje: string;
-  };
-}
+// TEMPORAL hasta migrar a la API: evitamos cambiar los imports de las pantallas.
+export type { RespuestaExito, RespuestaError } from '@/tipos/api';

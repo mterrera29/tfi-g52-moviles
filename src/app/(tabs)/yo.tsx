@@ -1,5 +1,5 @@
 import { Link, router } from 'expo-router';
-import { useCallback, useEffect, useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import {
   ActivityIndicator,
   Pressable,
@@ -12,10 +12,11 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { useSesion } from '@/contextos/sesion';
 import { useTema } from '@/contextos/tema';
+import { EstadoError } from '@/componentes/EstadoError';
+import { useFavoritos } from '@/hooks/useFavoritos';
+import type { RespuestaError } from '@/tipos/api';
 import { obtenerLineas } from '@/servicios/lineas';
 import { obtenerParadas } from '@/servicios/paradas';
-import type { Linea } from '@/tipos/linea';
-import type { Parada } from '@/tipos/parada';
 import type { Tema } from '@/tipos/usuario';
 
 function OpcionTema({
@@ -61,60 +62,29 @@ function OpcionTema({
 
 export default function YoScreen() {
   const { colores, preferencia, setPreferencia } = useTema();
-  const { sesion, cerrarSesion } = useSesion();
-  const usuario = sesion?.usuario ?? null;
-  const [lineasFavoritas, setLineasFavoritas] = useState<Linea[]>([]);
-  const [paradasFavoritas, setParadasFavoritas] = useState<Parada[]>([]);
-  const [cargando, setCargando] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const { sesion, errorCierre, cerrarSesion } = useSesion();
+  const consultaUsuario = useFavoritos();
+  const usuario = consultaUsuario.usuario;
+  const consultaLineas = useQuery<Awaited<ReturnType<typeof obtenerLineas>>, RespuestaError>({
+    queryKey: ['lineas'],
+    queryFn: () => obtenerLineas(),
+    enabled: !!sesion,
+  });
+  const consultaParadas = useQuery<Awaited<ReturnType<typeof obtenerParadas>>, RespuestaError>({
+    queryKey: ['paradas'],
+    queryFn: () => obtenerParadas(),
+    enabled: !!sesion,
+  });
+  const lineasFavoritas = (consultaLineas.data?.datos ?? []).filter((linea) =>
+    consultaUsuario.lineasFavoritas.includes(linea.id),
+  );
+  const paradasFavoritas = (consultaParadas.data?.datos ?? []).filter((parada) =>
+    consultaUsuario.paradasFavoritas.includes(parada.id),
+  );
+  const cargando = consultaUsuario.isPending || consultaLineas.isPending || consultaParadas.isPending;
+  const error = consultaUsuario.error ?? consultaLineas.error ?? consultaParadas.error;
 
-  const cargarFavoritos = useCallback(async () => {
-    if (!usuario) {
-      setLineasFavoritas([]);
-      setParadasFavoritas([]);
-      return;
-    }
-
-    setCargando(true);
-    setError(null);
-
-    const [respuestaLineas, respuestaParadas] = await Promise.all([
-      obtenerLineas(),
-      obtenerParadas(),
-    ]);
-
-    if ('error' in respuestaLineas) {
-      setError(respuestaLineas.error.mensaje);
-      setCargando(false);
-      return;
-    }
-
-    if ('error' in respuestaParadas) {
-      setError(respuestaParadas.error.mensaje);
-      setCargando(false);
-      return;
-    }
-
-    setLineasFavoritas(
-      respuestaLineas.datos.filter((linea) =>
-        usuario.lineasFavoritas.includes(linea.id),
-      ),
-    );
-
-    setParadasFavoritas(
-      respuestaParadas.datos.filter((parada) =>
-        usuario.paradasFavoritas.includes(parada.id),
-      ),
-    );
-
-    setCargando(false);
-  }, [usuario]);
-
-  useEffect(() => {
-    cargarFavoritos();
-  }, [cargarFavoritos]);
-
-  if (!usuario) {
+  if (!sesion) {
     return (
       <SafeAreaView
         style={[estilos.contenedor, { backgroundColor: colores.fondo }]}
@@ -130,6 +100,26 @@ export default function YoScreen() {
             <Text style={[estilos.nombre, { color: colores.texto }]}>
               Sin sesión
             </Text>
+            {errorCierre && (
+              <View style={{ gap: 8 }}>
+                <Text
+                  style={[estilos.error, { color: colores.error }]}
+                  accessibilityLiveRegion='polite'
+                >
+                  {errorCierre}
+                </Text>
+                <Pressable
+                  onPress={() => cerrarSesion()}
+                  accessibilityRole='button'
+                  accessibilityLabel='Reintentar cierre de sesión'
+                  style={[estilos.botonSecundario, { backgroundColor: colores.borde }]}
+                >
+                  <Text style={[estilos.botonSecundarioTexto, { color: colores.texto }]}>
+                    Reintentar cierre de sesión
+                  </Text>
+                </Pressable>
+              </View>
+            )}
             <Text style={[estilos.detalle, { color: colores.textoSecundario }]}>
               Podés consultar líneas, paradas y avisos sin cuenta. Iniciá sesión
               para ver favoritos y reportar demoras.
@@ -218,10 +208,19 @@ export default function YoScreen() {
         style={[estilos.centrado, { backgroundColor: colores.fondo }]}
         edges={['bottom']}
       >
-        <Text style={[estilos.error, { color: colores.error }]}>{error}</Text>
+        <EstadoError
+          mensaje={error.error.mensaje}
+          onReintentar={() => {
+            void consultaUsuario.refetch();
+            void consultaLineas.refetch();
+            void consultaParadas.refetch();
+          }}
+        />
       </SafeAreaView>
     );
   }
+
+  if (!usuario) return null;
 
   return (
     <SafeAreaView

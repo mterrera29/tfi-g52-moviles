@@ -1,6 +1,6 @@
 import Ionicons from '@react-native-vector-icons/ionicons';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
-import { useCallback, useEffect, useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import {
   ActivityIndicator,
   Pressable,
@@ -11,87 +11,43 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { useSesion } from '@/contextos/sesion';
+import { useFavoritos } from '@/hooks/useFavoritos';
 import { useTema } from '@/contextos/tema';
 import { obtenerAvisosPorLinea } from '@/servicios/avisos';
 import { obtenerLineaPorId } from '@/servicios/lineas';
 import { obtenerParadasPorIds } from '@/servicios/paradas';
-import type { Aviso } from '@/tipos/aviso';
-import type { Linea, Recorrido } from '@/tipos/linea';
-import type { Parada } from '@/tipos/parada';
-
-type RecorridoConParadas = Recorrido & { paradas: Parada[] };
+import { EstadoError } from '@/componentes/EstadoError';
+import type { RespuestaError } from '@/tipos/api';
 
 export default function LineaDetalleScreen() {
   const { colores } = useTema();
+  const { sesion } = useSesion();
+  const { usuario, actualizando, lineasFavoritas, alternarLineaFavorita, errorLinea } = useFavoritos();
   const { id } = useLocalSearchParams<{ id: string }>();
   const lineaId = Array.isArray(id) ? id[0] : id;
 
-  const [linea, setLinea] = useState<Linea | null>(null);
-  const [recorridos, setRecorridos] = useState<RecorridoConParadas[]>([]);
-  const [avisos, setAvisos] = useState<Aviso[]>([]);
-  const [cargando, setCargando] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const { data, isPending, error, refetch } = useQuery({
+    queryKey: ['linea', lineaId],
+    queryFn: async () => {
+      if (!lineaId) throw { error: { codigo: 'VALIDACION_FALLIDA', mensaje: 'No se indicó qué línea abrir.' } };
+      const { datos: linea } = await obtenerLineaPorId(lineaId);
+      const [recorridos, respuestaAvisos] = await Promise.all([
+        Promise.all(linea.recorridos.map(async (recorrido) => ({
+          ...recorrido,
+          paradas: (await obtenerParadasPorIds(recorrido.paradaIds)).datos,
+        }))),
+        obtenerAvisosPorLinea(lineaId),
+      ]);
+      return { linea, recorridos, avisos: respuestaAvisos.datos };
+    },
+  });
+  const esFavorita = !!sesion && lineasFavoritas.includes(lineaId);
+  const linea = data?.linea;
+  const recorridos = data?.recorridos ?? [];
+  const avisos = data?.avisos ?? [];
 
-  const cargarDetalle = useCallback(async () => {
-    if (!lineaId) {
-      setError('No se indicó qué línea abrir.');
-      setCargando(false);
-      return;
-    }
-
-    setCargando(true);
-    setError(null);
-
-    const respuestaLinea = await obtenerLineaPorId(lineaId);
-
-    if ('error' in respuestaLinea) {
-      setError(respuestaLinea.error.mensaje);
-      setLinea(null);
-      setRecorridos([]);
-      setAvisos([]);
-      setCargando(false);
-      return;
-    }
-
-    const lineaActual = respuestaLinea.datos;
-    setLinea(lineaActual);
-
-    const recorridosConParadas: RecorridoConParadas[] = [];
-
-    for (const recorrido of lineaActual.recorridos) {
-      const respuestaParadas = await obtenerParadasPorIds(recorrido.paradaIds);
-
-      if ('error' in respuestaParadas) {
-        setError(respuestaParadas.error.mensaje);
-        setCargando(false);
-        return;
-      }
-
-      recorridosConParadas.push({
-        ...recorrido,
-        paradas: respuestaParadas.datos,
-      });
-    }
-
-    setRecorridos(recorridosConParadas);
-
-    const respuestaAvisos = await obtenerAvisosPorLinea(lineaId);
-
-    if ('error' in respuestaAvisos) {
-      setError(respuestaAvisos.error.mensaje);
-      setCargando(false);
-      return;
-    }
-
-    setAvisos(respuestaAvisos.datos);
-    setCargando(false);
-  }, [lineaId]);
-
-  useEffect(() => {
-    cargarDetalle();
-  }, [cargarDetalle]);
-
-  if (cargando) {
+  if (isPending) {
     return (
       <SafeAreaView
         style={[estilos.centrado, { backgroundColor: colores.fondo }]}
@@ -111,9 +67,7 @@ export default function LineaDetalleScreen() {
         style={[estilos.centrado, { backgroundColor: colores.fondo }]}
         edges={['bottom']}
       >
-        <Text style={[estilos.error, { color: colores.error }]}>
-          {error ?? 'No se pudo cargar la línea.'}
-        </Text>
+        <EstadoError mensaje={error ? (error as unknown as RespuestaError).error.mensaje : 'No se pudo cargar la línea.'} onReintentar={() => { void refetch(); }} />
       </SafeAreaView>
     );
   }
@@ -154,6 +108,28 @@ export default function LineaDetalleScreen() {
       />
 
       <ScrollView contentContainerStyle={estilos.scroll}>
+        <Pressable
+          accessibilityRole='button'
+          accessibilityLabel={esFavorita ? 'Quitar de favoritos' : 'Agregar a favoritos'}
+          accessibilityState={{ selected: esFavorita, disabled: !!sesion && (!usuario || actualizando) }}
+          disabled={!!sesion && (!usuario || actualizando)}
+          onPress={() => {
+            if (!sesion) {
+              router.push('/login');
+              return;
+            }
+            alternarLineaFavorita(linea.id);
+          }}
+          style={{ alignSelf: 'flex-end', padding: 8 }}
+        >
+          <Ionicons name={esFavorita ? 'heart' : 'heart-outline'} size={28} color={colores.acento} />
+        </Pressable>
+        {errorLinea && (
+          <Text accessibilityLiveRegion='polite' style={{ color: colores.error }}>
+            {errorLinea.error.mensaje}
+          </Text>
+        )}
+
         <View
           accessible
           accessibilityLabel={`Línea ${linea.numero}, ${linea.nombre}. Empresa ${linea.empresa}`}
@@ -190,6 +166,9 @@ export default function LineaDetalleScreen() {
             </Text>
           </View>
         )}
+
+        {avisos.length === 0 && <Text style={{ color: colores.textoSecundario }}>No hay avisos vigentes para esta línea.</Text>}
+        {recorridos.length === 0 && <Text style={{ color: colores.textoSecundario }}>No hay recorridos para esta línea.</Text>}
 
         {avisos.map((aviso) => (
           <View
@@ -364,9 +343,5 @@ const estilos = StyleSheet.create({
   },
   mensaje: {
     fontSize: 15,
-  },
-  error: {
-    fontSize: 16,
-    textAlign: 'center',
   },
 });

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import {
   ActivityIndicator,
   FlatList,
@@ -12,8 +12,9 @@ import { useTema } from '@/contextos/tema';
 import type { ColoresTema } from '@/temas/paleta';
 import { obtenerAvisos } from '@/servicios/avisos';
 import { obtenerLineas } from '@/servicios/lineas';
-import type { Aviso, Gravedad } from '@/tipos/aviso';
-import type { Linea } from '@/tipos/linea';
+import type { Gravedad } from '@/tipos/aviso';
+import type { RespuestaError } from '@/tipos/api';
+import { EstadoError } from '@/componentes/EstadoError';
 
 function etiquetaGravedad(gravedad: Gravedad) {
   if (gravedad === 'desvio') return 'Desvío';
@@ -37,47 +38,13 @@ function formatearFecha(iso: string) {
 
 export default function AvisosScreen() {
   const { colores } = useTema();
-  const [avisos, setAvisos] = useState<Aviso[]>([]);
-  const [lineasPorId, setLineasPorId] = useState<Record<string, Linea>>({});
-  const [cargando, setCargando] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  const cargarAvisos = useCallback(async () => {
-    setCargando(true);
-    setError(null);
-
-    const [respuestaAvisos, respuestaLineas] = await Promise.all([
-      obtenerAvisos(),
-      obtenerLineas(),
-    ]);
-
-    if ('error' in respuestaLineas) {
-      setError(respuestaLineas.error.mensaje);
-      setAvisos([]);
-      setLineasPorId({});
-      setCargando(false);
-      return;
-    }
-
-    setLineasPorId(
-      Object.fromEntries(
-        respuestaLineas.datos.map((linea) => [linea.id, linea]),
-      ),
-    );
-
-    if ('error' in respuestaAvisos) {
-      setError(respuestaAvisos.error.mensaje);
-      setAvisos([]);
-    } else {
-      setAvisos(respuestaAvisos.datos);
-    }
-
-    setCargando(false);
-  }, []);
-
-  useEffect(() => {
-    cargarAvisos();
-  }, [cargarAvisos]);
+  const consultaAvisos = useQuery<Awaited<ReturnType<typeof obtenerAvisos>>, RespuestaError>({ queryKey: ['avisos', 'vigentes'], queryFn: obtenerAvisos });
+  const consultaLineas = useQuery<Awaited<ReturnType<typeof obtenerLineas>>, RespuestaError>({ queryKey: ['lineas'], queryFn: obtenerLineas });
+  const avisos = consultaAvisos.data?.datos ?? [];
+  const lineasPorId = Object.fromEntries((consultaLineas.data?.datos ?? []).map((linea) => [linea.id, linea]));
+  const error = consultaAvisos.error ?? consultaLineas.error;
+  const cargando = consultaAvisos.isPending || consultaLineas.isPending;
+  const cargarAvisos = () => { void consultaAvisos.refetch(); void consultaLineas.refetch(); };
 
   if (cargando) {
     return (
@@ -103,12 +70,7 @@ export default function AvisosScreen() {
         style={[estilos.centrado, { backgroundColor: colores.fondo }]}
         edges={['bottom']}
       >
-        <Text
-          style={[estilos.error, { color: colores.error }]}
-          accessibilityRole='alert'
-        >
-          {error}
-        </Text>
+        <EstadoError mensaje={error.error.mensaje} onReintentar={cargarAvisos} />
       </SafeAreaView>
     );
   }
@@ -121,7 +83,7 @@ export default function AvisosScreen() {
       <FlatList
         data={avisos}
         keyExtractor={(item) => item.id}
-        refreshing={cargando}
+        refreshing={consultaAvisos.isRefetching || consultaLineas.isRefetching}
         onRefresh={cargarAvisos}
         renderItem={({ item }) => {
           const numerosLineas = item.lineaIds
@@ -249,9 +211,5 @@ const estilos = StyleSheet.create({
   },
   mensaje: {
     fontSize: 16,
-  },
-  error: {
-    fontSize: 16,
-    textAlign: 'center',
   },
 });
