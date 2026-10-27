@@ -1,13 +1,11 @@
 import { cuentasMock } from '@/mocks/cuentas';
 import { usuarioMock } from '@/mocks/usuario';
 import type { DatosLogin, DatosRegistro } from '@/esquemas/auth';
-import type { RespuestaError, RespuestaExito } from '@/tipos/linea';
+import type { RespuestaError, RespuestaExito, Sesion } from '@/tipos/api';
 import type { Usuario } from '@/tipos/usuario';
 
-export type Sesion = {
-  token: string;
-  usuario: Usuario;
-};
+// TEMPORAL hasta migrar a la API: el contexto todavía importa Sesion desde acá.
+export type { Sesion } from '@/tipos/api';
 
 const esperar = (ms = 400) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -22,10 +20,12 @@ export async function iniciarSesion(
 ): Promise<RespuestaExito<Sesion> | RespuestaError> {
   await esperar();
 
+  // Preparamos el cuerpo de la API sin cambiar el formulario ni activar HTTP.
+  const cuerpo = { email: datos.email.trim().toLowerCase(), contrasena: datos.clave };
   const cuenta = cuentasMock.find(
     (item) =>
-      item.email.toLowerCase() === datos.email.trim().toLowerCase() &&
-      item.clave === datos.clave,
+      item.email.toLowerCase() === cuerpo.email &&
+      item.clave === cuerpo.contrasena,
   );
 
   if (!cuenta) {
@@ -53,7 +53,12 @@ export async function registrar(
 ): Promise<RespuestaExito<Sesion> | RespuestaError> {
   await esperar();
 
-  const email = datos.email.trim().toLowerCase();
+  const cuerpo = {
+    nombre: datos.nombre.trim(),
+    email: datos.email.trim().toLowerCase(),
+    contrasena: datos.clave,
+  };
+  const email = cuerpo.email;
   const yaExiste = cuentasMock.some(
     (item) => item.email.toLowerCase() === email,
   );
@@ -70,7 +75,7 @@ export async function registrar(
   const usuario: Usuario = {
     ...usuarioMock,
     id: `usr-${Date.now()}`,
-    nombre: datos.nombre.trim(),
+    nombre: cuerpo.nombre,
     email,
     lineasFavoritas: [],
     paradasFavoritas: [],
@@ -78,7 +83,7 @@ export async function registrar(
 
   cuentasMock.push({
     email,
-    clave: datos.clave,
+    clave: cuerpo.contrasena,
     usuario,
   });
 
