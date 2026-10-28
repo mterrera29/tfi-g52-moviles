@@ -12,6 +12,10 @@ export function obtenerParadaPorId(id: string): Promise<RespuestaUno<Parada>> {
   return cliente.get<RespuestaUno<Parada>>(`/paradas/${encodeURIComponent(id)}`).then((r) => r.data);
 }
 
+export function obtenerParadaPorQr(codigo: string): Promise<RespuestaUno<Parada>> {
+  return cliente.get<RespuestaUno<Parada>>(`/paradas/qr/${encodeURIComponent(codigo)}`).then((r) => r.data);
+}
+
 export async function obtenerParadasPorIds(ids: string[]): Promise<RespuestaLista<Parada>> {
   // Conservamos el orden de paso del recorrido, no el orden del listado.
   const respuestas = await Promise.all(ids.map(obtenerParadaPorId));

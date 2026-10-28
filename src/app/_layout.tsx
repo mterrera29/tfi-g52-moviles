@@ -46,6 +46,7 @@ function NavegacionConTema() {
           <Stack.Screen name='(tabs)' options={{ headerShown: false }} />
           <Stack.Screen name='linea/[id]' options={{ title: 'Línea' }} />
           <Stack.Screen name='parada/[id]' options={{ title: 'Parada' }} />
+          <Stack.Screen name='escanear' options={{ title: 'Escanear QR' }} />
           <Stack.Screen
             name='acerca'
             options={{

@@ -16,6 +16,13 @@
       "@react-native-vector-icons/ionicons",
       "expo-secure-store",
       [
+        "expo-camera",
+        {
+          "cameraPermission": "Escaneamos el QR de la parada y sacamos la foto del reporte de demora",
+          "recordAudioAndroid": false
+        }
+      ],
+      [
         "expo-local-authentication",
         {
           "faceIDPermission": "Usamos Face ID para reingresar a tu cuenta"
