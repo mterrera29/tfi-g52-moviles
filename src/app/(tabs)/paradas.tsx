@@ -1,3 +1,4 @@
+import Ionicons from '@react-native-vector-icons/ionicons';
 import { router } from 'expo-router';
 import { useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
@@ -85,6 +86,20 @@ export default function ParadasScreen() {
         style={estilos.contenedor}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
+      <Pressable
+        accessibilityRole='button'
+        accessibilityLabel='Escanear QR'
+        onPress={() => router.push('/escanear')}
+        style={({ pressed }) => [
+          estilos.botonEscanear,
+          { backgroundColor: colores.acento, opacity: pressed ? 0.7 : 1 },
+        ]}
+      >
+        <Ionicons name='qr-code' size={24} color={colores.acentoTexto} />
+        <Text style={[estilos.textoEscanear, { color: colores.acentoTexto }]}>
+          Escanear QR
+        </Text>
+      </Pressable>
       <TextInput
         value={busqueda}
         onChangeText={setBusqueda}
@@ -190,6 +205,22 @@ const estilos = StyleSheet.create({
     borderWidth: 1,
     borderRadius: 10,
     fontSize: 16,
+  },
+  botonEscanear: {
+    minHeight: 48,
+    marginHorizontal: 16,
+    marginTop: 16,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderRadius: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+  },
+  textoEscanear: {
+    fontSize: 16,
+    fontWeight: '600',
   },
   contador: {
     position: 'absolute',
