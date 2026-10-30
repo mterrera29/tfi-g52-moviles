@@ -1,3 +1,4 @@
+import { Mapa } from '@/componentes/Mapa';
 import Ionicons from '@react-native-vector-icons/ionicons';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { useQuery } from '@tanstack/react-query';
@@ -190,6 +191,15 @@ export default function LineaDetalleScreen() {
               {aviso.detalle}
             </Text>
           </View>
+        ))}
+
+        <View style={{ height: 260 }}>
+          <Mapa recorridos={linea.recorridos} paradas={recorridos.flatMap((recorrido) => recorrido.paradas)} color={linea.color} descripcion={`Mapa de los recorridos de la línea ${linea.numero}. Ida con línea continua y vuelta con línea discontinua.`} />
+        </View>
+        {linea.recorridos.map((recorrido) => (
+          <Text key={recorrido.sentido} style={{ color: colores.texto }}>
+            {recorrido.sentido === 'ida' ? 'Ida (línea continua)' : 'Vuelta (línea discontinua)'} — {recorrido.destino}
+          </Text>
         ))}
 
         {recorridos.map((recorrido) => (
