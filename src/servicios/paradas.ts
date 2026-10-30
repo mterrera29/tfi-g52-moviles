@@ -24,3 +24,13 @@ export async function obtenerParadasPorIds(ids: string[]): Promise<RespuestaList
     meta: { total: ids.length, pagina: 1, porPagina: ids.length },
   };
 }
+
+export function obtenerParadasCercanas({ latitud, longitud, radioMetros }: {
+  latitud: number;
+  longitud: number;
+  radioMetros: number;
+}): Promise<RespuestaLista<Parada>> {
+  return cliente.get<RespuestaLista<Parada>>('/paradas', {
+    params: { latitud, longitud, radioMetros, orden: 'distancia', porPagina: 1000 },
+  }).then((r) => r.data);
+}

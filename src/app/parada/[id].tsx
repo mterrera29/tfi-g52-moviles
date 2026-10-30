@@ -3,6 +3,8 @@ import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { useQuery } from '@tanstack/react-query';
 import {
   ActivityIndicator,
+  Alert,
+  Linking,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -110,6 +112,21 @@ export default function ParadaDetalleScreen() {
           {parada.refugio ? 'Con refugio' : 'Sin refugio'} · Sentido{' '}
           {parada.sentido}
         </Text>
+
+        <Pressable
+          accessibilityRole='button'
+          accessibilityLabel='Cómo llegar a esta parada'
+          onPress={async () => {
+            try {
+              await Linking.openURL(`https://www.google.com/maps/search/?api=1&query=${parada.coordenadas.latitud},${parada.coordenadas.longitud}`);
+            } catch {
+              Alert.alert('No se pudo abrir el mapa', 'Intentá nuevamente para ver cómo llegar a la parada.');
+            }
+          }}
+          style={({ pressed }) => [{ minHeight: 48, justifyContent: 'center', alignItems: 'center', borderRadius: 8, padding: 12, backgroundColor: colores.acento, opacity: pressed ? 0.7 : 1 }]}
+        >
+          <Text style={{ color: colores.acentoTexto, fontWeight: '600', fontSize: 16 }}>Cómo llegar</Text>
+        </Pressable>
 
         <Text style={[estilos.seccion, { color: colores.acento }]}>
           Líneas que paran acá

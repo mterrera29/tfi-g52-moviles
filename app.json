@@ -16,6 +16,16 @@
       "@react-native-vector-icons/ionicons",
       "expo-secure-store",
       [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "Mostramos las paradas cercanas a vos",
+          "isAndroidBackgroundLocationEnabled": false,
+          "isIosBackgroundLocationEnabled": false,
+          "locationAlwaysPermission": false,
+          "locationAlwaysAndWhenInUsePermission": false
+        }
+      ],
+      [
         "expo-camera",
         {
           "cameraPermission": "Escaneamos el QR de la parada y sacamos la foto del reporte de demora",
