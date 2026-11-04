@@ -1,3 +1,5 @@
 export const CLAVES = {
   token: 'sesion.token',
+  tema: 'preferencias.tema',
+  ultimaSincronizacion: 'consulta.ultimaSincronizacion',
 } as const;

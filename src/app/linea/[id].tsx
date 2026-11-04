@@ -15,9 +15,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useSesion } from '@/contextos/sesion';
 import { useFavoritos } from '@/hooks/useFavoritos';
 import { useTema } from '@/contextos/tema';
-import { obtenerAvisosPorLinea } from '@/servicios/avisos';
-import { obtenerLineaPorId } from '@/servicios/lineas';
-import { obtenerParadasPorIds } from '@/servicios/paradas';
+import { consultarLineaDetalle } from '@/servicios/consulta';
 import { EstadoError } from '@/componentes/EstadoError';
 import type { RespuestaError } from '@/tipos/api';
 
@@ -32,15 +30,7 @@ export default function LineaDetalleScreen() {
     queryKey: ['linea', lineaId],
     queryFn: async () => {
       if (!lineaId) throw { error: { codigo: 'VALIDACION_FALLIDA', mensaje: 'No se indicó qué línea abrir.' } };
-      const { datos: linea } = await obtenerLineaPorId(lineaId);
-      const [recorridos, respuestaAvisos] = await Promise.all([
-        Promise.all(linea.recorridos.map(async (recorrido) => ({
-          ...recorrido,
-          paradas: (await obtenerParadasPorIds(recorrido.paradaIds)).datos,
-        }))),
-        obtenerAvisosPorLinea(lineaId),
-      ]);
-      return { linea, recorridos, avisos: respuestaAvisos.datos };
+      return consultarLineaDetalle(lineaId);
     },
   });
   const esFavorita = !!sesion && lineasFavoritas.includes(lineaId);

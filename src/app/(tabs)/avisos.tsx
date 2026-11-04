@@ -11,7 +11,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTema } from '@/contextos/tema';
 import type { ColoresTema } from '@/temas/paleta';
 import { obtenerAvisos } from '@/servicios/avisos';
-import { obtenerLineas } from '@/servicios/lineas';
+import { consultarLineas } from '@/servicios/consulta';
 import type { Gravedad } from '@/tipos/aviso';
 import type { RespuestaError } from '@/tipos/api';
 import { EstadoError } from '@/componentes/EstadoError';
@@ -39,7 +39,7 @@ function formatearFecha(iso: string) {
 export default function AvisosScreen() {
   const { colores } = useTema();
   const consultaAvisos = useQuery<Awaited<ReturnType<typeof obtenerAvisos>>, RespuestaError>({ queryKey: ['avisos', 'vigentes'], queryFn: obtenerAvisos });
-  const consultaLineas = useQuery<Awaited<ReturnType<typeof obtenerLineas>>, RespuestaError>({ queryKey: ['lineas'], queryFn: obtenerLineas });
+  const consultaLineas = useQuery<Awaited<ReturnType<typeof consultarLineas>>, RespuestaError>({ queryKey: ['lineas'], queryFn: consultarLineas });
   const avisos = consultaAvisos.data?.datos ?? [];
   const lineasPorId = Object.fromEntries((consultaLineas.data?.datos ?? []).map((linea) => [linea.id, linea]));
   const error = consultaAvisos.error ?? consultaLineas.error;

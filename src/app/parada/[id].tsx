@@ -16,9 +16,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useSesion } from '@/contextos/sesion';
 import { useFavoritos } from '@/hooks/useFavoritos';
 import { useTema } from '@/contextos/tema';
-import { obtenerProximosHorariosPorParada } from '@/servicios/horarios';
-import { obtenerLineas } from '@/servicios/lineas';
-import { obtenerParadaPorId } from '@/servicios/paradas';
+import { consultarParadaDetalle } from '@/servicios/consulta';
 import { EstadoError } from '@/componentes/EstadoError';
 import type { RespuestaError } from '@/tipos/api';
 
@@ -33,16 +31,7 @@ export default function ParadaDetalleScreen() {
     queryKey: ['parada', paradaId, 'proximos', 3],
     queryFn: async () => {
       if (!paradaId) throw { error: { codigo: 'VALIDACION_FALLIDA', mensaje: 'No se indicó qué parada abrir.' } };
-      const [respuestaParada, respuestaLineas, respuestaHorarios] = await Promise.all([
-        obtenerParadaPorId(paradaId),
-        obtenerLineas(),
-        obtenerProximosHorariosPorParada(paradaId, 3),
-      ]);
-      return {
-        parada: respuestaParada.datos,
-        lineas: respuestaLineas.datos.filter((linea) => respuestaParada.datos.lineaIds.includes(linea.id)),
-        horarios: respuestaHorarios.datos,
-      };
+      return consultarParadaDetalle(paradaId, 3);
     },
   });
   const esFavorita = !!sesion && paradasFavoritas.includes(paradaId);

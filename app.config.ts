@@ -8,6 +8,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   slug: config.slug!,
   plugins: [
     ...(config.plugins ?? []),
+    'expo-sqlite',
     ['react-native-maps', { androidGoogleMapsApiKey: process.env.GOOGLE_MAPS_KEY }],
   ],
 });

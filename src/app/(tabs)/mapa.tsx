@@ -6,7 +6,7 @@ import { EstadoError } from '@/componentes/EstadoError';
 import { Mapa } from '@/componentes/Mapa';
 import { useTema } from '@/contextos/tema';
 import { useUbicacion } from '@/hooks/useUbicacion';
-import { obtenerParadasCercanas } from '@/servicios/paradas';
+import { consultarParadasCercanas } from '@/servicios/consulta';
 import type { RespuestaError } from '@/tipos/api';
 
 export default function MapaScreen() {
@@ -14,10 +14,10 @@ export default function MapaScreen() {
   const { coordenadas, estado, pedirUbicacion } = useUbicacion();
   const latitud = coordenadas ? Number(coordenadas.latitud.toFixed(3)) : null;
   const longitud = coordenadas ? Number(coordenadas.longitud.toFixed(3)) : null;
-  const { data, isPending, error, refetch } = useQuery<Awaited<ReturnType<typeof obtenerParadasCercanas>>, RespuestaError>({
+  const { data, isPending, error, refetch } = useQuery<Awaited<ReturnType<typeof consultarParadasCercanas>>, RespuestaError>({
     queryKey: ['paradas', 'cercanas', latitud, longitud],
     enabled: estado === 'concedida' && latitud !== null && longitud !== null,
-    queryFn: () => obtenerParadasCercanas({ latitud: latitud!, longitud: longitud!, radioMetros: 800 }),
+    queryFn: () => consultarParadasCercanas({ latitud: latitud!, longitud: longitud!, radioMetros: 800 }),
   });
   const paradas = estado === 'concedida' ? data?.datos ?? [] : [];
 

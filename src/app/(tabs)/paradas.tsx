@@ -17,7 +17,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { useTema } from '@/contextos/tema';
 import { useColumnasLista } from '@/hooks/useColumnasLista';
-import { obtenerParadas } from '@/servicios/paradas';
+import { consultarParadas } from '@/servicios/consulta';
 import type { RespuestaError } from '@/tipos/api';
 import { EstadoError } from '@/componentes/EstadoError';
 
@@ -25,9 +25,9 @@ export default function ParadasScreen() {
   const { colores } = useTema();
   const { columnas, onLayout } = useColumnasLista();
   const [busqueda, setBusqueda] = useState('');
-  const { data, isPending, error, refetch, isRefetching } = useQuery<Awaited<ReturnType<typeof obtenerParadas>>, RespuestaError>({
+  const { data, isPending, error, refetch, isRefetching } = useQuery<Awaited<ReturnType<typeof consultarParadas>>, RespuestaError>({
     queryKey: ['paradas'],
-    queryFn: () => obtenerParadas(),
+    queryFn: () => consultarParadas(),
   });
   const paradas = data?.datos ?? [];
   const esGrilla = columnas > 1;

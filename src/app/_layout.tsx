@@ -1,11 +1,14 @@
+import { SQLiteProvider } from 'expo-sqlite';
 import { focusManager, QueryClientProvider } from '@tanstack/react-query';
 import { SplashScreen, Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
-import { AppState, Platform } from 'react-native';
+import { AppState, Platform, View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
+import { AvisoSinConexion } from '@/componentes/AvisoSinConexion';
 import { PantallaBloqueo } from '@/componentes/PantallaBloqueo';
+import { migrar } from '@/db/migrar';
 import { SesionProvider, useSesion } from '@/contextos/sesion';
 import { TemaProvider, useTema } from '@/contextos/tema';
 import { queryClient } from '@/servicios/queryClient';
@@ -85,13 +88,18 @@ export default function RootLayout() {
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
-      <QueryClientProvider client={queryClient}>
-        <SesionProvider>
-          <TemaProvider preferenciaInicial='sistema'>
-            <NavegacionConTema />
-          </TemaProvider>
-        </SesionProvider>
-      </QueryClientProvider>
+      <SQLiteProvider databaseName='transporte.db' onInit={migrar}>
+        <QueryClientProvider client={queryClient}>
+          <SesionProvider>
+            <TemaProvider preferenciaInicial='sistema'>
+              <View style={{ flex: 1 }}>
+                <AvisoSinConexion />
+                <NavegacionConTema />
+              </View>
+            </TemaProvider>
+          </SesionProvider>
+        </QueryClientProvider>
+      </SQLiteProvider>
     </GestureHandlerRootView>
   );
 }

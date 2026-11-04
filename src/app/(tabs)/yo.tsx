@@ -15,8 +15,7 @@ import { useTema } from '@/contextos/tema';
 import { EstadoError } from '@/componentes/EstadoError';
 import { useFavoritos } from '@/hooks/useFavoritos';
 import type { RespuestaError } from '@/tipos/api';
-import { obtenerLineas } from '@/servicios/lineas';
-import { obtenerParadas } from '@/servicios/paradas';
+import { consultarLineas, consultarParadas } from '@/servicios/consulta';
 import type { Tema } from '@/tipos/usuario';
 
 function OpcionTema({
@@ -65,14 +64,14 @@ export default function YoScreen() {
   const { sesion, errorCierre, cerrarSesion } = useSesion();
   const consultaUsuario = useFavoritos();
   const usuario = consultaUsuario.usuario;
-  const consultaLineas = useQuery<Awaited<ReturnType<typeof obtenerLineas>>, RespuestaError>({
+  const consultaLineas = useQuery<Awaited<ReturnType<typeof consultarLineas>>, RespuestaError>({
     queryKey: ['lineas'],
-    queryFn: () => obtenerLineas(),
+    queryFn: () => consultarLineas(),
     enabled: !!sesion,
   });
-  const consultaParadas = useQuery<Awaited<ReturnType<typeof obtenerParadas>>, RespuestaError>({
+  const consultaParadas = useQuery<Awaited<ReturnType<typeof consultarParadas>>, RespuestaError>({
     queryKey: ['paradas'],
-    queryFn: () => obtenerParadas(),
+    queryFn: () => consultarParadas(),
     enabled: !!sesion,
   });
   const lineasFavoritas = (consultaLineas.data?.datos ?? []).filter((linea) =>
