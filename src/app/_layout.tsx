@@ -3,7 +3,7 @@ import { focusManager, QueryClientProvider } from '@tanstack/react-query';
 import { SplashScreen, Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
-import { AppState, Platform, View } from 'react-native';
+import { AppState, Platform, type AppStateStatus } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 import { AvisoSinConexion } from '@/componentes/AvisoSinConexion';
@@ -17,24 +17,30 @@ import { queryClient } from '@/servicios/queryClient';
 void SplashScreen.preventAutoHideAsync().catch(() => {});
 
 function NavegacionConTema() {
-  const { colores, modo, setPreferencia } = useTema();
+  const { colores, modo, preferencia, setPreferencia } = useTema();
   const { sesion, restaurando, bloqueada } = useSesion();
 
   useEffect(() => {
-    if (!restaurando) void SplashScreen.hideAsync().catch(() => {});
+    if (restaurando) return;
+    const marco = requestAnimationFrame(() => {
+      void SplashScreen.hideAsync().catch(() => {});
+    });
+    return () => cancelAnimationFrame(marco);
   }, [restaurando]);
 
   useEffect(() => {
-    if (sesion?.usuario) {
-      setPreferencia(sesion.usuario.tema);
+    const temaServidor = sesion?.usuario?.tema;
+    if (temaServidor && temaServidor !== preferencia) {
+      setPreferencia(temaServidor);
     }
-  }, [sesion?.usuario, setPreferencia]);
+  }, [sesion?.usuario?.tema, preferencia, setPreferencia]);
 
   if (restaurando) return null;
 
   return (
     <>
       <StatusBar style={modo === 'oscuro' ? 'light' : 'dark'} />
+      <AvisoSinConexion />
       {bloqueada ? (
         <PantallaBloqueo />
       ) : (
@@ -80,10 +86,17 @@ function NavegacionConTema() {
 export default function RootLayout() {
   useEffect(() => {
     // En móvil el foco lo marca AppState, no una ventana (U05.T01 diap. 22).
-    const suscripcion = AppState.addEventListener('change', (estado) => {
+    const sincronizarFoco = (estado: AppStateStatus) => {
       focusManager.setFocused(estado === 'active');
+    };
+    const marco = requestAnimationFrame(() => {
+      sincronizarFoco(AppState.currentState);
     });
-    return () => suscripcion.remove();
+    const suscripcion = AppState.addEventListener('change', sincronizarFoco);
+    return () => {
+      cancelAnimationFrame(marco);
+      suscripcion.remove();
+    };
   }, []);
 
   return (
@@ -92,10 +105,7 @@ export default function RootLayout() {
         <QueryClientProvider client={queryClient}>
           <SesionProvider>
             <TemaProvider preferenciaInicial='sistema'>
-              <View style={{ flex: 1 }}>
-                <AvisoSinConexion />
-                <NavegacionConTema />
-              </View>
+              <NavegacionConTema />
             </TemaProvider>
           </SesionProvider>
         </QueryClientProvider>

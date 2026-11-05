@@ -16,6 +16,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { useSesion } from '@/contextos/sesion';
 import { useTema } from '@/contextos/tema';
+import { EstadoError } from '@/componentes/EstadoError';
 import { esquemaLogin, type DatosLogin } from '@/esquemas/auth';
 
 export default function LoginScreen() {
@@ -48,6 +49,19 @@ export default function LoginScreen() {
 
     router.replace('/lineas');
   };
+
+  if (enviando) {
+    return (
+      <SafeAreaView
+        style={[estilos.contenedor, estilos.centrado, { backgroundColor: colores.fondo }]}
+        edges={['bottom']}
+      >
+        <Stack.Screen options={{ title: 'Iniciar sesión' }} />
+        <ActivityIndicator size='large' color={colores.acento} accessibilityLabel='Ingresando' />
+        <Text style={{ color: colores.textoSecundario }}>Ingresando...</Text>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView
@@ -135,12 +149,12 @@ export default function LoginScreen() {
           )}
 
           {errorServicio && (
-            <Text
-              style={[estilos.errorServicio, { color: colores.error }]}
-              accessibilityRole='alert'
-            >
-              {errorServicio}
-            </Text>
+            <EstadoError
+              mensaje={errorServicio}
+              onReintentar={() => {
+                void handleSubmit(enviar)();
+              }}
+            />
           )}
 
           <Pressable
@@ -156,13 +170,9 @@ export default function LoginScreen() {
               },
             ]}
           >
-            {enviando ? (
-              <ActivityIndicator color={colores.acentoTexto} />
-            ) : (
-              <Text style={[estilos.botonTexto, { color: colores.acentoTexto }]}>
-                Ingresar
-              </Text>
-            )}
+            <Text style={[estilos.botonTexto, { color: colores.acentoTexto }]}>
+              Ingresar
+            </Text>
           </Pressable>
 
           <Link href='/registro' asChild>
@@ -181,6 +191,13 @@ export default function LoginScreen() {
 const estilos = StyleSheet.create({
   contenedor: {
     flex: 1,
+  },
+  centrado: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 12,
+    padding: 24,
   },
   formulario: {
     flex: 1,

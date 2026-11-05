@@ -13,6 +13,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useSesion } from '@/contextos/sesion';
 import { useTema } from '@/contextos/tema';
 import { EstadoError } from '@/componentes/EstadoError';
+import { EstadoVacio } from '@/componentes/EstadoVacio';
 import { useFavoritos } from '@/hooks/useFavoritos';
 import type { RespuestaError } from '@/tipos/api';
 import { consultarLineas, consultarParadas } from '@/servicios/consulta';
@@ -295,9 +296,7 @@ export default function YoScreen() {
         </Text>
 
         {lineasFavoritas.length === 0 ? (
-          <Text style={[estilos.mensaje, { color: colores.textoSecundario }]}>
-            No tenés líneas favoritas.
-          </Text>
+          <EstadoVacio mensaje='No tenés líneas favoritas todavía.' />
         ) : (
           lineasFavoritas.map((linea) => (
             <Pressable
@@ -339,9 +338,7 @@ export default function YoScreen() {
         </Text>
 
         {paradasFavoritas.length === 0 ? (
-          <Text style={[estilos.mensaje, { color: colores.textoSecundario }]}>
-            No tenés paradas favoritas.
-          </Text>
+          <EstadoVacio mensaje='No tenés paradas favoritas todavía.' />
         ) : (
           paradasFavoritas.map((parada) => (
             <Pressable

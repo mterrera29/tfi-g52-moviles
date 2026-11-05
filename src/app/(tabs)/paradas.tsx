@@ -20,6 +20,7 @@ import { useColumnasLista } from '@/hooks/useColumnasLista';
 import { consultarParadas } from '@/servicios/consulta';
 import type { RespuestaError } from '@/tipos/api';
 import { EstadoError } from '@/componentes/EstadoError';
+import { EstadoVacio } from '@/componentes/EstadoVacio';
 
 export default function ParadasScreen() {
   const { colores } = useTema();
@@ -170,11 +171,13 @@ export default function ParadasScreen() {
           </Pressable>
         )}
         ListEmptyComponent={
-          <View style={estilos.listaVacia}>
-            <Text style={[estilos.mensaje, { color: colores.textoSecundario }]}>
-              No se encontraron paradas.
-            </Text>
-          </View>
+          <EstadoVacio
+            mensaje={
+              paradas.length === 0
+                ? 'No hay paradas disponibles.'
+                : 'No se encontraron paradas con ese nombre o calle.'
+            }
+          />
         }
       />
       </KeyboardAvoidingView>

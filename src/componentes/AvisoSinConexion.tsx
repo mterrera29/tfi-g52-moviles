@@ -1,4 +1,5 @@
 import { useNetworkState } from 'expo-network';
+import { useEffect, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
 import { useTema } from '@/contextos/tema';
@@ -9,12 +10,16 @@ import { CLAVES } from '@/servicios/claves';
 export function AvisoSinConexion() {
   const red = useNetworkState();
   const { colores } = useTema();
+  const [ultima, setUltima] = useState<string | null>(null);
+
+  useEffect(() => {
+    setUltima(leerTexto(CLAVES.ultimaSincronizacion));
+  }, [red.isInternetReachable]);
 
   if (red.isInternetReachable !== false) {
     return null;
   }
 
-  const ultima = leerTexto(CLAVES.ultimaSincronizacion);
   const antiguedad = formatearAntiguedad(ultima);
   const fechaHora = formatearFechaHora(ultima);
   const detalle =

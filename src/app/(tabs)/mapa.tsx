@@ -3,6 +3,7 @@ import { router } from 'expo-router';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { EstadoError } from '@/componentes/EstadoError';
+import { EstadoVacio } from '@/componentes/EstadoVacio';
 import { Mapa } from '@/componentes/Mapa';
 import { useTema } from '@/contextos/tema';
 import { useUbicacion } from '@/hooks/useUbicacion';
@@ -52,11 +53,20 @@ export default function MapaScreen() {
           <Text style={[estilos.textoBoton, { color: colores.acento }]}>Buscar la parada por nombre</Text>
         </Pressable>
         {estado === 'concedida' && (
-          isPending ? <ActivityIndicator color={colores.acento} accessibilityLabel='Cargando paradas cercanas' /> :
+          isPending ? (
+            <View style={estilos.estadoCarga}>
+              <ActivityIndicator color={colores.acento} accessibilityLabel='Cargando paradas cercanas' />
+              <Text style={{ color: colores.textoSecundario }}>Cargando paradas cercanas...</Text>
+            </View>
+          ) :
           error ? <EstadoError mensaje={error.error.mensaje} onReintentar={() => { void refetch(); }} /> :
-          <Text accessibilityLiveRegion='polite' style={{ color: colores.textoSecundario }}>
-            {paradas.length === 0 ? 'No hay paradas a menos de 800 metros de tu ubicación.' : `${paradas.length} paradas cercanas. Tocá una parada en el mapa para ver su detalle.`}
-          </Text>
+          paradas.length === 0 ? (
+            <EstadoVacio mensaje='No hay paradas a menos de 800 metros de tu ubicación.' />
+          ) : (
+            <Text accessibilityLiveRegion='polite' style={{ color: colores.textoSecundario }}>
+              {`${paradas.length} paradas cercanas. Tocá una parada en el mapa para ver su detalle.`}
+            </Text>
+          )
         )}
       </ScrollView>
     </SafeAreaView>
@@ -68,6 +78,7 @@ const estilos = StyleSheet.create({
   mapa: { flex: 1, minHeight: 180 },
   panel: { flexGrow: 0, maxHeight: '55%' },
   contenido: { padding: 16, gap: 12 },
+  estadoCarga: { alignItems: 'center', gap: 8 },
   boton: { minHeight: 48, justifyContent: 'center', paddingHorizontal: 16, paddingVertical: 12, borderRadius: 8 },
   textoBoton: { fontSize: 16, fontWeight: '600', textAlign: 'center' },
 });
