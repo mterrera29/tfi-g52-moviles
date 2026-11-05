@@ -1,3 +1,4 @@
+import Ionicons from '@react-native-vector-icons/ionicons';
 import { useRouter } from 'expo-router';
 import { useNetworkState } from 'expo-network';
 import { useQuery } from '@tanstack/react-query';
@@ -66,6 +67,14 @@ export default function InicioScreen() {
     (consultaUsuario.paradasFavoritas.length > 0 && consultaParadas.isPending);
   const errorAvisos = consultaAvisos.error ?? consultaLineas.error;
   const avisosSinRed = sinConexion || consultaAvisos.error?.error.codigo === 'SIN_CONEXION';
+  const cantidadAvisos = !avisosSinRed && !consultaAvisos.isFetching && consultaAvisos.isSuccess
+    ? consultaAvisos.data.datos.length
+    : null;
+  const descripcionAvisos = cantidadAvisos === null
+    ? 'Cambios en el servicio'
+    : cantidadAvisos === 0
+      ? 'Sin avisos hoy'
+      : `${cantidadAvisos} ${cantidadAvisos === 1 ? 'aviso' : 'avisos'} hoy`;
   const cargarFavoritos = () => {
     if (sesion) {
       void consultaUsuario.refetch();
@@ -77,6 +86,17 @@ export default function InicioScreen() {
     void consultaAvisos.refetch();
     void consultaLineas.refetch();
   };
+
+  const nombreUsuario = sesion?.usuario.nombre.trim();
+  const empresas = [...new Set(
+    (consultaLineas.data?.datos ?? []).map((linea) => linea.empresa.trim()).filter(Boolean),
+  )].join(' · ');
+  const accesos = [
+    { ruta: '/lineas', icono: 'bus-outline', titulo: 'Líneas', descripcion: 'Recorridos y horarios', pista: 'Abre las líneas de colectivo' },
+    { ruta: '/paradas', icono: 'location-outline', titulo: 'Paradas', descripcion: 'Buscá tu parada', pista: 'Abre la búsqueda de paradas' },
+    { ruta: '/mapa', icono: 'map-outline', titulo: 'Mapa', descripcion: 'Paradas cerca de mí', pista: 'Abre el mapa sin pedir tu ubicación. Podés compartirla desde esa pantalla' },
+    { ruta: '/avisos', icono: 'notifications-outline', titulo: 'Avisos', descripcion: descripcionAvisos, pista: 'Abre todos los avisos' },
+  ] as const;
 
   return (
     <SafeAreaView style={[estilos.contenedor, { backgroundColor: colores.fondo }]} edges={['bottom']}>
@@ -91,19 +111,73 @@ export default function InicioScreen() {
           />
         }
       >
+        <View style={[estilos.hero, { backgroundColor: colores.headerFondo }]}>
+          <View style={estilos.marca}>
+            <Ionicons name='bus-outline' size={24} color={colores.headerTexto} accessible={false} />
+            <Text accessibilityRole='header' style={[estilos.nombreApp, { color: colores.headerTexto }]}>Transporte Público</Text>
+          </View>
+          {empresas ? <Text style={[estilos.empresas, { color: colores.headerTexto }]}>{empresas}</Text> : null}
+          <Text style={[estilos.saludo, { color: colores.headerTexto }]}>
+            {nombreUsuario ? `Hola, ${nombreUsuario}` : 'Hola'}
+          </Text>
+          <Text style={[estilos.descripcionHero, { color: colores.headerTexto }]}>
+            Consultá líneas, paradas y avisos de Paraná para organizar tu viaje.
+          </Text>
+        </View>
+
         <View style={estilos.seccion}>
-          <Text role='heading' style={[estilos.titulo, { color: colores.texto }]}>Favoritos</Text>
+          <Text accessibilityRole='header' style={[estilos.titulo, { color: colores.texto }]}>¿A dónde vamos?</Text>
+          <View style={estilos.accesos}>
+            {accesos.map((acceso) => (
+              <Pressable
+                key={acceso.ruta}
+                accessibilityRole='button'
+                accessibilityLabel={`${acceso.titulo}. ${acceso.descripcion}`}
+                accessibilityHint={acceso.pista}
+                onPress={() => router.push(acceso.ruta)}
+                style={({ pressed }) => [estilos.acceso, {
+                  backgroundColor: pressed ? colores.fondo : colores.fondoSecundario,
+                  borderColor: colores.borde,
+                }]}
+              >
+                <View style={estilos.accesoIcono}>
+                  <Ionicons name={acceso.icono} size={26} color={colores.acento} accessible={false} />
+                  {acceso.ruta === '/avisos' && cantidadAvisos !== null ? (
+                    <View style={[estilos.badgeAvisos, { backgroundColor: colores.acento }]}>
+                      <Text style={[estilos.badgeAvisosTexto, { color: colores.acentoTexto }]}>{cantidadAvisos}</Text>
+                    </View>
+                  ) : null}
+                </View>
+                <Text style={[estilos.accesoTitulo, { color: colores.texto }]}>{acceso.titulo}</Text>
+                <Text style={[estilos.descripcion, { color: colores.textoSecundario }]}>{acceso.descripcion}</Text>
+              </Pressable>
+            ))}
+          </View>
+        </View>
+
+        <View style={estilos.seccion}>
+          <Text accessibilityRole='header' style={[estilos.titulo, { color: colores.texto }]}>Tus favoritos</Text>
+          <Text style={[estilos.descripcion, { color: colores.textoSecundario }]}>
+            Tus líneas y paradas guardadas, siempre a mano.
+          </Text>
           {!sesion || (!errorFavoritos && !cargandoFavoritos && lineasFavoritas.length === 0 && paradasFavoritas.length === 0) ? (
-            <>
-              <EstadoVacio mensaje='Todavía no tenés favoritos' />
+            <View style={[estilos.tarjetaVacia, { backgroundColor: colores.fondoSecundario, borderColor: colores.borde }]}>
+              <Ionicons name='heart-outline' size={28} color={colores.acento} accessible={false} />
+              <Text style={[estilos.parada, { color: colores.texto }]}>Tu próximo viaje empieza acá</Text>
+              <Text style={[estilos.descripcion, { color: colores.textoSecundario }]}>
+                Todavía no tenés favoritos. Explorá las líneas y guardá las que usás para encontrarlas más rápido.
+              </Text>
               <Pressable
                 accessibilityRole='button'
+                accessibilityLabel='Explorar líneas para agregar favoritos'
+                accessibilityHint='Abre las líneas. Podés guardar una como favorita desde su detalle'
                 onPress={() => router.push('/lineas')}
-                style={({ pressed }) => [estilos.boton, { backgroundColor: colores.acento, opacity: pressed ? 0.7 : 1 }]}
+                style={({ pressed }) => [estilos.enlaceFavoritos, { opacity: pressed ? 0.7 : 1 }]}
               >
-                  <Text style={[estilos.botonTexto, { color: colores.acentoTexto }]}>Líneas</Text>
-                </Pressable>
-            </>
+                <Text style={[estilos.botonTexto, { color: colores.acento }]}>Explorá las líneas</Text>
+                <Ionicons name='arrow-forward' size={20} color={colores.acento} accessible={false} />
+              </Pressable>
+            </View>
           ) : errorFavoritos ? (
             <EstadoError mensaje={errorFavoritos.error.mensaje} onReintentar={cargarFavoritos} />
           ) : cargandoFavoritos ? (
@@ -111,7 +185,9 @@ export default function InicioScreen() {
           ) : (
             <>
               {lineasFavoritas.map((linea) => (
-                <FilaLinea key={linea.id} linea={linea} esGrilla={false} colores={colores} />
+                <View key={linea.id} style={[estilos.tarjetaFavorita, { borderColor: colores.borde }]}>
+                  <FilaLinea linea={linea} esGrilla={false} colores={colores} />
+                </View>
               ))}
               {paradasFavoritas.map((parada) => (
                 <Pressable
@@ -120,7 +196,7 @@ export default function InicioScreen() {
                     accessibilityRole='button'
                     accessibilityLabel={`Parada ${parada.nombre}`}
                     accessibilityHint='Abre el detalle de la parada'
-                    style={({ pressed }) => [estilos.filaParada, { borderBottomColor: colores.borde, backgroundColor: pressed ? colores.fondoSecundario : colores.fondo }]}
+                    style={({ pressed }) => [estilos.filaParada, { borderColor: colores.borde, backgroundColor: pressed ? colores.fondoSecundario : colores.fondo }]}
                   >
                     <Text style={[estilos.parada, { color: colores.texto }]}>{parada.nombre}</Text>
                     <Text style={{ color: colores.textoSecundario }}>Parada · {parada.sentido}</Text>
@@ -132,11 +208,14 @@ export default function InicioScreen() {
 
         <View style={estilos.seccion}>
           <View style={estilos.encabezado}>
-            <Text role='heading' style={[estilos.titulo, { color: colores.texto }]}>Avisos vigentes</Text>
-            <Pressable accessibilityRole='button' accessibilityLabel='Ver todos los avisos' onPress={() => router.push('/avisos')} style={({ pressed }) => [estilos.enlace, { opacity: pressed ? 0.7 : 1 }]}>
+            <Text accessibilityRole='header' style={[estilos.titulo, { color: colores.texto }]}>Avisos vigentes</Text>
+            <Pressable accessibilityRole='button' accessibilityLabel='Ver todos los avisos' accessibilityHint='Abre la lista completa de avisos' onPress={() => router.push('/avisos')} style={({ pressed }) => [estilos.enlace, { opacity: pressed ? 0.7 : 1 }]}>
                 <Text style={[estilos.botonTexto, { color: colores.acento }]}>Ver todos</Text>
               </Pressable>
           </View>
+          <Text style={[estilos.descripcion, { color: colores.textoSecundario }]}>
+            Cambios en el servicio, con tus líneas favoritas primero.
+          </Text>
           {avisosSinRed ? (
             <EstadoError mensaje='Los avisos necesitan conexión a internet. Conectate para ver los avisos vigentes.' onReintentar={cargarAvisos} />
           ) : errorAvisos ? (
@@ -146,34 +225,39 @@ export default function InicioScreen() {
           ) : avisos.length === 0 ? (
             <EstadoVacio mensaje='No hay avisos activos.' />
           ) : avisos.map((aviso) => (
-            <TarjetaAviso key={aviso.id} aviso={aviso} lineasPorId={lineasPorId} />
+            <TarjetaAviso key={aviso.id} aviso={aviso} lineasPorId={lineasPorId} style={estilos.aviso} />
           ))}
         </View>
       </ScrollView>
-      <View style={estilos.mapa}>
-        <Pressable
-          accessibilityRole='button'
-          accessibilityHint='Abre la pestaña Mapa'
-          onPress={() => router.push('/mapa')}
-          style={({ pressed }) => [estilos.boton, { backgroundColor: colores.acento, opacity: pressed ? 0.7 : 1 }]}
-        >
-            <Text style={[estilos.botonTexto, { color: colores.acentoTexto }]}>Paradas cerca de mí</Text>
-          </Pressable>
-      </View>
     </SafeAreaView>
   );
 }
 
 const estilos = StyleSheet.create({
   contenedor: { flex: 1 },
-  scroll: { paddingVertical: 8, gap: 12 },
-  seccion: { paddingHorizontal: 16, gap: 8 },
+  scroll: { paddingTop: 16, paddingBottom: 24, gap: 24 },
+  hero: { marginHorizontal: 16, padding: 24, borderRadius: 20, gap: 12 },
+  marca: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  nombreApp: { flex: 1, fontSize: 22, fontWeight: '700' },
+  empresas: { fontSize: 13, lineHeight: 20 },
+  saludo: { marginTop: 8, fontSize: 28, fontWeight: '700' },
+  descripcionHero: { fontSize: 16, lineHeight: 24 },
+  seccion: { paddingHorizontal: 16, gap: 12 },
   titulo: { fontSize: 20, fontWeight: '700' },
-  encabezado: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap' },
-  boton: { minHeight: 48, padding: 14, borderRadius: 8, alignItems: 'center', justifyContent: 'center' },
+  descripcion: { fontSize: 15, lineHeight: 22 },
+  accesos: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
+  acceso: { flexBasis: '45%', flexGrow: 1, minHeight: 132, padding: 16, gap: 8, borderWidth: 1, borderRadius: 16 },
+  accesoTitulo: { fontSize: 17, fontWeight: '700' },
+  accesoIcono: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  badgeAvisos: { minWidth: 24, minHeight: 24, paddingHorizontal: 6, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
+  badgeAvisosTexto: { fontSize: 13, fontWeight: '700' },
+  tarjetaVacia: { padding: 20, gap: 12, borderWidth: 1, borderRadius: 16 },
+  tarjetaFavorita: { borderWidth: 1, borderRadius: 16, overflow: 'hidden' },
+  encabezado: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8 },
   botonTexto: { fontSize: 16, fontWeight: '600' },
-  enlace: { minHeight: 48, paddingHorizontal: 12, justifyContent: 'center' },
-  filaParada: { minHeight: 64, padding: 12, gap: 4, borderBottomWidth: StyleSheet.hairlineWidth },
+  enlace: { minHeight: 48, minWidth: 48, paddingHorizontal: 12, justifyContent: 'center' },
+  enlaceFavoritos: { minHeight: 48, alignSelf: 'flex-start', flexDirection: 'row', alignItems: 'center', paddingHorizontal: 8, gap: 8 },
+  filaParada: { minHeight: 72, padding: 16, gap: 4, borderWidth: 1, borderRadius: 16 },
   parada: { fontSize: 16, fontWeight: '600' },
-  mapa: { paddingHorizontal: 16, paddingVertical: 8 },
+  aviso: { marginHorizontal: 0, marginTop: 0 },
 });

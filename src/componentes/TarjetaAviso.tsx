@@ -1,4 +1,5 @@
 import { StyleSheet, Text, View } from 'react-native';
+import type { StyleProp, ViewStyle } from 'react-native';
 
 import { useTema } from '@/contextos/tema';
 import type { ColoresTema } from '@/temas/paleta';
@@ -25,9 +26,10 @@ function formatearFecha(iso: string) {
   });
 }
 
-export function TarjetaAviso({ aviso, lineasPorId }: {
+export function TarjetaAviso({ aviso, lineasPorId, style }: {
   aviso: Aviso;
   lineasPorId: Record<string, Linea>;
+  style?: StyleProp<ViewStyle>;
 }) {
   const { colores } = useTema();
   const numerosLineas = aviso.lineaIds
@@ -43,6 +45,7 @@ export function TarjetaAviso({ aviso, lineasPorId }: {
       style={[
         estilos.tarjeta,
         { backgroundColor: colorGravedad(aviso.gravedad, colores) },
+        style,
       ]}
     >
       <Text style={[estilos.etiqueta, { color: colores.acento }]}>
