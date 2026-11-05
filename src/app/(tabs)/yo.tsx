@@ -149,9 +149,9 @@ export default function YoScreen() {
               />
             </View>
 
-            <Link href='/login' asChild>
-              <Pressable
+            <Pressable
                 accessibilityRole='button'
+                onPress={() => router.push('/login')}
                 accessibilityLabel='Iniciar sesión'
                 style={({ pressed }) => [
                   estilos.botonPrimario,
@@ -170,7 +170,6 @@ export default function YoScreen() {
                   Iniciar sesión
                 </Text>
               </Pressable>
-            </Link>
 
             <Link href='/registro' asChild>
               <Pressable
