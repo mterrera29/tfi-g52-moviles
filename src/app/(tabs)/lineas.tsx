@@ -13,6 +13,7 @@ import { useColumnasLista } from '@/hooks/useColumnasLista';
 import { consultarLineas } from '@/servicios/consulta';
 import type { RespuestaError } from '@/tipos/api';
 import { EstadoError } from '@/componentes/EstadoError';
+import { EstadoVacio } from '@/componentes/EstadoVacio';
 
 export default function LineasScreen() {
   const { colores } = useTema();
@@ -73,9 +74,7 @@ export default function LineasScreen() {
           <FilaLinea linea={item} esGrilla={esGrilla} colores={colores} />
         )}
         ListEmptyComponent={
-          <Text style={{ color: colores.textoSecundario, padding: 16 }}>
-            No hay líneas.
-          </Text>
+          <EstadoVacio mensaje='No hay líneas disponibles.' />
         }
       />
     </SafeAreaView>

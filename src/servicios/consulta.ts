@@ -18,7 +18,11 @@ import {
   persistirParadas,
   registrarUltimaSincronizacion,
 } from '@/db/sqlite';
-import { proximosHorariosDesdeTabla, todosHorariosParada } from '@/lib/proximosHorarios';
+import {
+  mensajeSinProximosServicio,
+  proximosHorariosDesdeTabla,
+  todosHorariosParada,
+} from '@/lib/proximosHorarios';
 import { obtenerAvisosPorLinea } from '@/servicios/avisos';
 import { cliente, normalizarError } from '@/servicios/cliente';
 import { obtenerFeriados } from '@/servicios/feriados';
@@ -210,7 +214,31 @@ export type ParadaDetalleConsulta = {
   parada: Parada;
   lineas: Linea[];
   horarios: Horario[];
+  mensajeSinHorarios: string | null;
 };
+
+async function armarDetalleParada(
+  db: ReturnType<typeof obtenerConexion>,
+  parada: Parada,
+  lineas: Linea[],
+  horarios: Horario[],
+): Promise<ParadaDetalleConsulta> {
+  const feriados = await leerFeriados(db);
+  const porTipo = Object.fromEntries(
+    await Promise.all(
+      TIPOS_DE_DIA.map(async (tipo) => [tipo, await leerHorariosParada(db, parada.id, tipo)] as const),
+    ),
+  ) as Partial<Record<TipoDeDia, Horario[]>>;
+  const tablas = todosHorariosParada(porTipo);
+
+  return {
+    parada,
+    lineas,
+    horarios,
+    mensajeSinHorarios:
+      horarios.length === 0 ? mensajeSinProximosServicio(tablas, feriados) : null,
+  };
+}
 
 export async function consultarParadaDetalle(paradaId: string, cantidad = 3): Promise<ParadaDetalleConsulta> {
   const db = obtenerConexion();
@@ -228,12 +256,12 @@ export async function consultarParadaDetalle(paradaId: string, cantidad = 3): Pr
 
     const parada = respuestaParada.data.datos;
     const lineas = respuestaLineas.data.datos.filter((linea) => parada.lineaIds.includes(linea.id));
+    const horarios = respuestaHorarios.datos;
+    if (horarios.length === 0) {
+      await persistirHorariosCompletosParada(paradaId).catch(() => {});
+    }
 
-    return {
-      parada,
-      lineas,
-      horarios: respuestaHorarios.datos,
-    };
+    return armarDetalleParada(db, parada, lineas, horarios);
   } catch (error) {
     const normalizado = normalizarError(error);
     if (!esSinConexion(normalizado)) throw normalizado;
@@ -251,7 +279,7 @@ export async function consultarParadaDetalle(paradaId: string, cantidad = 3): Pr
     ) as Partial<Record<TipoDeDia, Horario[]>>;
     const horarios = proximosHorariosDesdeTabla(todosHorariosParada(porTipo), feriados, cantidad);
 
-    return { parada, lineas, horarios };
+    return armarDetalleParada(db, parada, lineas, horarios);
   }
 }
 

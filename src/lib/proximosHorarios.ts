@@ -58,3 +58,27 @@ export function todosHorariosParada(
 ): Horario[] {
   return (['habil', 'sabado', 'domingo', 'feriado'] as const).flatMap((tipo) => porTipo[tipo] ?? []);
 }
+
+export function mensajeSinProximosServicio(
+  tablas: Horario[],
+  feriados: Feriado[],
+  ahora = new Date(),
+): string {
+  if (proximosHorariosDesdeTabla(tablas, feriados, 1, ahora).length > 0) {
+    return 'No hay próximos servicios para esta parada.';
+  }
+
+  const manana = new Date(ahora);
+  manana.setDate(manana.getDate() + 1);
+  manana.setHours(0, 0, 0, 0);
+  const tipoManana = elegirTipoDeDia(manana, feriados);
+  const primerManana = tablas
+    .filter((horario) => horario.tipoDeDia === tipoManana)
+    .sort(ordenarPorHora)[0];
+
+  if (primerManana) {
+    return `No hay más servicio hasta mañana a las ${primerManana.hora}`;
+  }
+
+  return 'No hay próximos servicios para esta parada.';
+}

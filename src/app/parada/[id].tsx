@@ -18,6 +18,7 @@ import { useFavoritos } from '@/hooks/useFavoritos';
 import { useTema } from '@/contextos/tema';
 import { consultarParadaDetalle } from '@/servicios/consulta';
 import { EstadoError } from '@/componentes/EstadoError';
+import { EstadoVacio } from '@/componentes/EstadoVacio';
 import type { RespuestaError } from '@/tipos/api';
 
 export default function ParadaDetalleScreen() {
@@ -38,6 +39,7 @@ export default function ParadaDetalleScreen() {
   const parada = data?.parada;
   const lineas = data?.lineas ?? [];
   const horarios = data?.horarios ?? [];
+  const mensajeSinHorarios = data?.mensajeSinHorarios ?? null;
 
   if (isPending) {
     return (
@@ -121,7 +123,9 @@ export default function ParadaDetalleScreen() {
           Líneas que paran acá
         </Text>
         <View style={estilos.lineasFila}>
-          {lineas.length === 0 && <Text style={{ color: colores.textoSecundario }}>No hay líneas para esta parada.</Text>}
+          {lineas.length === 0 && (
+            <EstadoVacio mensaje='No hay líneas para esta parada.' />
+          )}
           {lineas.map((linea) => (
             <View
               key={linea.id}
@@ -139,12 +143,9 @@ export default function ParadaDetalleScreen() {
         </Text>
 
         {horarios.length === 0 ? (
-          <Text
-            style={[estilos.mensaje, { color: colores.textoSecundario }]}
-            accessibilityLiveRegion='polite'
-          >
-            No hay próximos servicios para esta parada.
-          </Text>
+          <EstadoVacio
+            mensaje={mensajeSinHorarios ?? 'No hay próximos servicios para esta parada.'}
+          />
         ) : (
           horarios.map((horario, indice) => {
             const linea = lineas.find((item) => item.id === horario.lineaId);

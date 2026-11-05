@@ -15,6 +15,7 @@ import { consultarLineas } from '@/servicios/consulta';
 import type { Gravedad } from '@/tipos/aviso';
 import type { RespuestaError } from '@/tipos/api';
 import { EstadoError } from '@/componentes/EstadoError';
+import { EstadoVacio } from '@/componentes/EstadoVacio';
 
 function etiquetaGravedad(gravedad: Gravedad) {
   if (gravedad === 'desvio') return 'Desvío';
@@ -137,13 +138,7 @@ export default function AvisosScreen() {
           </View>
           );
         }}
-        ListEmptyComponent={
-          <View style={estilos.listaVacia}>
-            <Text style={[estilos.mensaje, { color: colores.textoSecundario }]}>
-              No hay avisos vigentes.
-            </Text>
-          </View>
-        }
+        ListEmptyComponent={<EstadoVacio mensaje='No hay avisos activos.' />}
         contentContainerStyle={
           avisos.length === 0 ? estilos.listaVaciaContenedor : undefined
         }
