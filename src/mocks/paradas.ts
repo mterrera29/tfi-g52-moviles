@@ -1,0 +1,58 @@
+import type { Parada } from '@/tipos/parada';
+
+export const paradasMock: Parada[] = [
+  {
+    id: 'par-101',
+    nombre: 'Alameda y Urquiza',
+    coordenadas: { latitud: -31.7333, longitud: -60.5241 },
+    lineaIds: ['lin-05', 'lin-14'],
+    sentido: 'ida',
+    refugio: true,
+    codigoQr: 'PARANA:par-101',
+  },
+  {
+    id: 'par-102',
+    nombre: 'Mitre y Corrientes',
+    coordenadas: { latitud: -31.7342, longitud: -60.5225 },
+    lineaIds: ['lin-05'],
+    sentido: 'ida',
+    refugio: false,
+    codigoQr: null,
+  },
+  {
+    id: 'par-103',
+    nombre: 'Puerto Viejo y Sáenz Peña',
+    coordenadas: { latitud: -31.735, longitud: -60.52 },
+    lineaIds: ['lin-05'],
+    sentido: 'ida',
+    refugio: true,
+    codigoQr: 'PARANA:par-103',
+  },
+  {
+    id: 'par-201',
+    nombre: 'Bajada Grande y López y Planes',
+    coordenadas: { latitud: -31.74, longitud: -60.53 },
+    lineaIds: ['lin-14'],
+    sentido: 'ida',
+    refugio: false,
+    codigoQr: null,
+  },
+  {
+    id: 'par-301',
+    nombre: 'Centro Cívico',
+    coordenadas: { latitud: -31.732, longitud: -60.525 },
+    lineaIds: ['lin-02'],
+    sentido: 'ida',
+    refugio: true,
+    codigoQr: 'PARANA:par-301',
+  },
+  {
+    id: 'par-302',
+    nombre: 'Villa Urquiza y Almafuerte',
+    coordenadas: { latitud: -31.728, longitud: -60.518 },
+    lineaIds: ['lin-02'],
+    sentido: 'ida',
+    refugio: false,
+    codigoQr: null,
+  },
+];

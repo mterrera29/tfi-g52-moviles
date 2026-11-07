@@ -1,0 +1,263 @@
+import Ionicons from '@react-native-vector-icons/ionicons';
+import { router } from 'expo-router';
+import { useMemo, useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import {
+  ActivityIndicator,
+  FlatList,
+  KeyboardAvoidingView,
+  Platform,
+  Pressable,
+  StyleSheet,
+  Text,
+  TextInput,
+} from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+
+import { useTema } from '@/contextos/tema';
+import { useColumnasLista } from '@/hooks/useColumnasLista';
+import { consultarParadas } from '@/servicios/consulta';
+import type { RespuestaError } from '@/tipos/api';
+import { EstadoError } from '@/componentes/EstadoError';
+import { EstadoVacio } from '@/componentes/EstadoVacio';
+
+export default function ParadasScreen() {
+  const { colores } = useTema();
+  const { columnas, onLayout } = useColumnasLista();
+  const [busqueda, setBusqueda] = useState('');
+  const { data, isPending, error, refetch, isRefetching } = useQuery<Awaited<ReturnType<typeof consultarParadas>>, RespuestaError>({
+    queryKey: ['paradas'],
+    queryFn: () => consultarParadas(),
+  });
+  const paradas = data?.datos ?? [];
+  const esGrilla = columnas > 1;
+
+  const paradasFiltradas = useMemo(() => {
+    const texto = busqueda.trim().toLowerCase();
+
+    if (!texto) {
+      return paradas;
+    }
+
+    return paradas.filter((parada) =>
+      parada.nombre.toLowerCase().includes(texto),
+    );
+  }, [busqueda, paradas]);
+
+  if (isPending) {
+    return (
+      <SafeAreaView
+        style={[estilos.centrado, { backgroundColor: colores.fondo }]}
+        edges={['bottom']}
+      >
+        <ActivityIndicator
+          size='large'
+          color={colores.acento}
+          accessibilityLabel='Cargando paradas'
+        />
+        <Text style={[estilos.mensaje, { color: colores.textoSecundario }]}>
+          Cargando paradas...
+        </Text>
+      </SafeAreaView>
+    );
+  }
+
+  if (error) {
+    return (
+      <SafeAreaView
+        style={[estilos.centrado, { backgroundColor: colores.fondo }]}
+        edges={['bottom']}
+      >
+        <EstadoError
+          mensaje={error.error.mensaje}
+          onReintentar={() => { void refetch(); }}
+        />
+      </SafeAreaView>
+    );
+  }
+
+  return (
+    <SafeAreaView
+      onLayout={onLayout}
+      style={[estilos.contenedor, { backgroundColor: colores.fondo }]}
+      edges={['bottom']}
+    >
+      <KeyboardAvoidingView
+        style={estilos.contenedor}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      >
+      <Pressable
+        accessibilityRole='button'
+        accessibilityLabel='Escanear QR'
+        onPress={() => router.push('/escanear')}
+        style={({ pressed }) => [
+          estilos.botonEscanear,
+          { backgroundColor: colores.acento, opacity: pressed ? 0.7 : 1 },
+        ]}
+      >
+        <Ionicons name='qr-code' size={24} color={colores.acentoTexto} />
+        <Text style={[estilos.textoEscanear, { color: colores.acentoTexto }]}>
+          Escanear QR
+        </Text>
+      </Pressable>
+      <TextInput
+        value={busqueda}
+        onChangeText={setBusqueda}
+        placeholder='Buscar parada por nombre o calle'
+        placeholderTextColor={colores.textoSecundario}
+        accessibilityLabel='Buscar parada por nombre o calle'
+        accessibilityRole='search'
+        style={[
+          estilos.buscador,
+          {
+            borderColor: colores.borde,
+            backgroundColor: colores.fondoSecundario,
+            color: colores.texto,
+          },
+        ]}
+        autoCapitalize='none'
+      />
+
+      <Text
+        accessibilityLiveRegion='polite'
+        style={estilos.contador}
+      >
+        {paradasFiltradas.length === 1
+          ? '1 parada encontrada'
+          : `${paradasFiltradas.length} paradas encontradas`}
+      </Text>
+
+      <FlatList
+        key={esGrilla ? `grilla-${columnas}` : 'lista'}
+        data={paradasFiltradas}
+        {...(esGrilla
+          ? { numColumns: columnas, columnWrapperStyle: estilos.filaGrilla }
+          : {})}
+        keyExtractor={(item) => item.id}
+        refreshing={isRefetching}
+        onRefresh={() => { void refetch(); }}
+        contentContainerStyle={esGrilla ? estilos.contenidoGrilla : undefined}
+        renderItem={({ item }) => (
+          <Pressable
+            accessibilityRole='button'
+            accessibilityLabel={`${item.nombre}. ${item.refugio ? 'Con refugio' : 'Sin refugio'}. Sentido ${item.sentido}`}
+            accessibilityHint='Abre el detalle de la parada'
+            hitSlop={8}
+            onPress={() =>
+              router.push({
+                pathname: '/parada/[id]',
+                params: { id: item.id },
+              })
+            }
+            style={({ pressed }) => [
+              estilos.fila,
+              esGrilla && estilos.celdaGrilla,
+              { borderBottomColor: colores.borde },
+              esGrilla && {
+                borderColor: colores.borde,
+                backgroundColor: colores.fondoSecundario,
+              },
+              pressed && { backgroundColor: colores.fondoSecundario },
+            ]}
+          >
+            <Text style={[estilos.nombre, { color: colores.texto }]}>
+              {item.nombre}
+            </Text>
+            <Text style={[estilos.detalle, { color: colores.textoSecundario }]}>
+              {item.refugio ? 'Con refugio' : 'Sin refugio'} · Sentido{' '}
+              {item.sentido}
+            </Text>
+          </Pressable>
+        )}
+        ListEmptyComponent={
+          <EstadoVacio
+            mensaje={
+              paradas.length === 0
+                ? 'No hay paradas disponibles.'
+                : 'No se encontraron paradas con ese nombre o calle.'
+            }
+          />
+        }
+      />
+      </KeyboardAvoidingView>
+    </SafeAreaView>
+  );
+}
+
+const estilos = StyleSheet.create({
+  contenedor: {
+    flex: 1,
+  },
+  centrado: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 24,
+    gap: 12,
+  },
+  listaVacia: {
+    padding: 24,
+    alignItems: 'center',
+  },
+  buscador: {
+    margin: 16,
+    marginBottom: 8,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    borderWidth: 1,
+    borderRadius: 10,
+    fontSize: 16,
+  },
+  botonEscanear: {
+    minHeight: 48,
+    marginHorizontal: 16,
+    marginTop: 16,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderRadius: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+  },
+  textoEscanear: {
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  contador: {
+    position: 'absolute',
+    width: 1,
+    height: 1,
+    overflow: 'hidden',
+    opacity: 0,
+  },
+  contenidoGrilla: {
+    paddingHorizontal: 8,
+  },
+  filaGrilla: {
+    gap: 8,
+  },
+  fila: {
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+  },
+  celdaGrilla: {
+    flex: 1,
+    borderBottomWidth: 0,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderRadius: 10,
+    marginBottom: 8,
+  },
+  nombre: {
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  detalle: {
+    marginTop: 4,
+    fontSize: 14,
+  },
+  mensaje: {
+    fontSize: 16,
+  },
+});

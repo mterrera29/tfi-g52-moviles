@@ -1,0 +1,91 @@
+{
+  "expo": {
+    "name": "Transporte Público",
+    "slug": "tp1-g52-moviles",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/images/icon.png",
+    "splash": {
+      "image": "./assets/images/splash-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#0B3A5D"
+    },
+    "scheme": "tp1g52moviles",
+    "android": {
+      "package": "com.mterrera29.tp1g52moviles",
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/images/adaptive-icon.png",
+        "backgroundColor": "#0B3A5D"
+      }
+    },
+    "web": {
+      "bundler": "metro"
+    },
+    "plugins": [
+      "expo-router",
+      "@react-native-vector-icons/ionicons",
+      "expo-secure-store",
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/images/splash-icon.png",
+          "backgroundColor": "#0B3A5D",
+          "imageWidth": 200
+        }
+      ],
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "Mostramos las paradas cercanas a vos",
+          "isAndroidBackgroundLocationEnabled": false,
+          "isIosBackgroundLocationEnabled": false,
+          "locationAlwaysPermission": false,
+          "locationAlwaysAndWhenInUsePermission": false
+        }
+      ],
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Escaneamos el QR de la parada y sacamos la foto del reporte de demora",
+          "recordAudioAndroid": false
+        }
+      ],
+      [
+        "expo-local-authentication",
+        {
+          "faceIDPermission": "Usamos Face ID para reingresar a tu cuenta"
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Elegimos la foto del reporte de demora",
+          "cameraPermission": "Sacamos la foto del reporte de demora",
+          "microphonePermission": false
+        }
+      ],
+      "expo-file-system",
+      [
+        "expo-notifications",
+        {
+          "color": "#0B3A5D"
+        }
+      ],
+      [
+        "expo-sensors",
+        {
+          "motionPermission": false
+        }
+      ],
+      "expo-video"
+    ],
+    "experiments": {
+      "typedRoutes": true
+    },
+    "extra": {
+      "eas": {
+        "projectId": "a223bbf2-7d51-4494-8fe5-71a41c950df1"
+      }
+    }
+  }
+}
