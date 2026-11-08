@@ -15,7 +15,7 @@ export default function LineaIdLayout() {
     >
       {/* Título provisorio mientras carga: después cada pantalla pone el suyo. */}
       <Stack.Screen name='index' options={{ title: 'Línea' }} />
-      <Stack.Screen name='mapa' options={{ title: 'Mapa de la línea' }} />
+      <Stack.Screen name='mapa' options={{ title: 'Mapa del recorrido' }} />
     </Stack>
   );
 }
