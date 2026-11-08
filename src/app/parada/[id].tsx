@@ -181,9 +181,10 @@ export default function ParadaDetalleScreen() {
             });
           }}
           style={({ pressed }) => [
-            { minHeight: 48, justifyContent: 'center', alignItems: 'center', borderRadius: 8, padding: 12, borderWidth: 1, borderColor: colores.acento, opacity: pressed ? 0.7 : 1 },
+            { minHeight: 48, flexDirection: 'row', gap: 8, justifyContent: 'center', alignItems: 'center', borderRadius: 8, padding: 12, borderWidth: 1, borderColor: colores.acento, opacity: pressed ? 0.7 : 1 },
           ]}
         >
+          <Ionicons name='alert-circle-outline' size={22} color={colores.acento} />
           <Text style={{ color: colores.acento, fontWeight: '600', fontSize: 16 }}>Reportar demora</Text>
         </Pressable>
 
