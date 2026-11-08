@@ -19,6 +19,8 @@ import { FilaLinea } from '@/componentes/FilaLinea';
 import { TarjetaAviso } from '@/componentes/TarjetaAviso';
 import { useSesion } from '@/contextos/sesion';
 import { useTema } from '@/contextos/tema';
+import { useUbicacionConocida } from '@/hooks/useUbicacionConocida';
+import { textoDistancia } from '@/lib/rumboParada';
 import { CartelParada } from '@/componentes/CartelParada';
 import { useFavoritos } from '@/hooks/useFavoritos';
 import { consultarAvisos, consultarLineas, consultarParadas } from '@/servicios/consulta';
@@ -31,6 +33,7 @@ export default function InicioScreen() {
   const red = useNetworkState();
   const sinConexion = red.isConnected === false || red.isInternetReachable === false;
   const consultaUsuario = useFavoritos();
+  const miUbicacion = useUbicacionConocida();
   const consultaLineas = useQuery<Awaited<ReturnType<typeof consultarLineas>>, RespuestaError>({
     queryKey: ['lineas'],
     queryFn: consultarLineas,
@@ -203,7 +206,9 @@ export default function InicioScreen() {
                     <CartelParada />
                     <View style={{ flex: 1 }}>
                       <Text style={[estilos.parada, { color: colores.texto }]}>{parada.nombre}</Text>
-                      <Text style={{ color: colores.textoSecundario }}>Parada · {parada.sentido}</Text>
+                      <Text style={{ color: colores.textoSecundario }}>
+                        {textoDistancia(miUbicacion, parada.coordenadas) ? `${textoDistancia(miUbicacion, parada.coordenadas)} · ` : ''}Parada · {parada.sentido}
+                      </Text>
                     </View>
                   </Pressable>
               ))}

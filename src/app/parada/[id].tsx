@@ -28,7 +28,8 @@ import { EstadoVacio } from '@/componentes/EstadoVacio';
 import { BotonRecordatorio } from '@/componentes/BotonRecordatorio';
 import { ReportesParada } from '@/componentes/ReportesParada';
 import { FlechaParada } from '@/componentes/FlechaParada';
-import { coordenadasValidas } from '@/lib/rumboParada';
+import { coordenadasValidas, textoDistancia } from '@/lib/rumboParada';
+import { useUbicacionConocida } from '@/hooks/useUbicacionConocida';
 import type { RespuestaError } from '@/tipos/api';
 
 export default function ParadaDetalleScreen() {
@@ -38,6 +39,7 @@ export default function ParadaDetalleScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const paradaId = Array.isArray(id) ? id[0] : id;
   const ahora = useAhoraCadaMinuto();
+  const miUbicacion = useUbicacionConocida();
 
   const { data, isPending, error, refetch } = useQuery({
     queryKey: ['parada', paradaId, 'proximos', 3],
@@ -48,6 +50,7 @@ export default function ParadaDetalleScreen() {
   });
   const esFavorita = !!sesion && paradasFavoritas.includes(paradaId);
   const parada = data?.parada;
+  const distancia = parada ? textoDistancia(miUbicacion, parada.coordenadas) : null;
   const lineas = data?.lineas ?? [];
   const horarios = data?.horarios ?? [];
   const tablas = data?.tablas ?? [];
@@ -112,6 +115,7 @@ export default function ParadaDetalleScreen() {
             style={[estilos.subtitulo, { color: colores.textoSecundario, flex: 1 }]}
             accessibilityLabel={`${parada.refugio ? 'Con refugio' : 'Sin refugio'}. Sentido ${parada.sentido}`}
           >
+            {distancia ? `${distancia} · ` : ''}
             {parada.refugio ? 'Con refugio' : 'Sin refugio'} · Sentido{' '}
             {parada.sentido}
           </Text>

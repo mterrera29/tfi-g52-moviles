@@ -18,6 +18,7 @@ import {
   rumboGeografico,
   rumboMagnetico,
   suavizarAngulo,
+  textoDistancia,
 } from './rumboParada';
 import { resolverWatchSiVigente } from './suscripcionVigente';
 import type { Coordenadas } from '../tipos/linea';
@@ -255,3 +256,10 @@ void Promise.all(pendientes)
     console.error(error);
     process.exitCode = 1;
   });
+
+test('texto de distancia en metros, kilómetros y sin ubicación', () => {
+  const parada = { latitud: 0, longitud: 0.001 };
+  igual(textoDistancia(null, parada), null, 'sin ubicación');
+  igual(textoDistancia({ latitud: 0, longitud: 0 }, parada), 'a 110 m', 'metros');
+  igual(textoDistancia({ latitud: 0, longitud: 0 }, { latitud: 0, longitud: 0.02 }), 'a 2,2 km', 'km');
+});

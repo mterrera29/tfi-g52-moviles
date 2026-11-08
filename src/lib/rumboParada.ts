@@ -183,3 +183,12 @@ export function posicionGpsConCoordenadas(posicion: {
 export const CONSEJO_HORIZONTAL =
   'Para que la flecha sirva, tené el teléfono más o menos horizontal. El magnetómetro no dice si está de canto.';
 
+
+/** "a 120 m" o "a 1,2 km"; null si no se pudo calcular. */
+export function textoDistancia(origen: Coordenadas | null, destino: Coordenadas): string | null {
+  if (!origen) return null;
+  const metros = distanciaEntre(origen, destino);
+  if (metros === null) return null;
+  if (metros < 1000) return `a ${Math.max(10, Math.round(metros / 10) * 10)} m`;
+  return `a ${(metros / 1000).toFixed(1).replace('.', ',')} km`;
+}
