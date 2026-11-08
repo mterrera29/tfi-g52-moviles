@@ -8,6 +8,7 @@ import Animated, {
 
 import type { ColoresTema } from '@/temas/paleta';
 import type { Linea } from '@/tipos/linea';
+import { BadgeLinea } from '@/componentes/BadgeLinea';
 
 type FilaLineaProps = {
   linea: Linea;
@@ -51,13 +52,7 @@ export function FilaLinea({ linea, esGrilla, colores }: FilaLineaProps) {
           pressed && { backgroundColor: colores.fondoSecundario },
         ]}
       >
-        <View
-          style={[estilos.badge, { backgroundColor: linea.color }]}
-          importantForAccessibility='no-hide-descendants'
-          accessibilityElementsHidden
-        >
-          <Text style={estilos.numero}>{linea.numero}</Text>
-        </View>
+        <BadgeLinea numero={linea.numero} color={linea.color} tamano='medio' />
         <View style={estilos.texto}>
           <Text style={[estilos.nombre, { color: colores.texto }]}>
             {linea.nombre}
@@ -93,14 +88,6 @@ const estilos = StyleSheet.create({
   texto: {
     flex: 1,
   },
-  badge: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  numero: { color: '#fff', fontWeight: '700' },
   nombre: { fontSize: 16, fontWeight: '600' },
   empresa: { fontSize: 14 },
 });

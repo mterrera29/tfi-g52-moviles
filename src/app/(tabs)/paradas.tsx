@@ -15,6 +15,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { CartelParada } from '@/componentes/CartelParada';
 import { useTema } from '@/contextos/tema';
 import { useColumnasLista } from '@/hooks/useColumnasLista';
 import { consultarParadas } from '@/servicios/consulta';
@@ -161,13 +162,16 @@ export default function ParadasScreen() {
               pressed && { backgroundColor: colores.fondoSecundario },
             ]}
           >
-            <Text style={[estilos.nombre, { color: colores.texto }]}>
-              {item.nombre}
-            </Text>
-            <Text style={[estilos.detalle, { color: colores.textoSecundario }]}>
-              {item.refugio ? 'Con refugio' : 'Sin refugio'} · Sentido{' '}
-              {item.sentido}
-            </Text>
+            <CartelParada />
+            <View style={estilos.textoParada}>
+              <Text style={[estilos.nombre, { color: colores.texto }]}>
+                {item.nombre}
+              </Text>
+              <Text style={[estilos.detalle, { color: colores.textoSecundario }]}>
+                {item.refugio ? 'Con refugio' : 'Sin refugio'} · Sentido{' '}
+                {item.sentido}
+              </Text>
+            </View>
           </Pressable>
         )}
         ListEmptyComponent={
@@ -239,10 +243,14 @@ const estilos = StyleSheet.create({
     gap: 8,
   },
   fila: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
     paddingHorizontal: 16,
     paddingVertical: 14,
     borderBottomWidth: StyleSheet.hairlineWidth,
   },
+  textoParada: { flex: 1 },
   celdaGrilla: {
     flex: 1,
     borderBottomWidth: 0,
