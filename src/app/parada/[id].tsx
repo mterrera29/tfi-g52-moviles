@@ -26,6 +26,7 @@ import { BadgeLinea } from '@/componentes/BadgeLinea';
 import { EstadoError } from '@/componentes/EstadoError';
 import { EstadoVacio } from '@/componentes/EstadoVacio';
 import { BotonRecordatorio } from '@/componentes/BotonRecordatorio';
+import { ReportesParada } from '@/componentes/ReportesParada';
 import { FlechaParada } from '@/componentes/FlechaParada';
 import { coordenadasValidas } from '@/lib/rumboParada';
 import type { RespuestaError } from '@/tipos/api';
@@ -154,6 +155,8 @@ export default function ParadaDetalleScreen() {
             nombreParada={parada.nombre}
           />
         ) : null}
+
+        <ReportesParada paradaId={parada.id} lineas={lineas} />
 
         <Pressable
           accessibilityRole='button'

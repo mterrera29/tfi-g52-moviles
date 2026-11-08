@@ -175,3 +175,27 @@ export async function guardarYEnviarReporte(pedido: PedidoNuevoReporte): Promise
     };
   }
 }
+
+// Reportes de los últimos 90 minutos de una parada (los trae así la API).
+export async function consultarReportesParada(paradaId: string): Promise<ReporteDeDemora[]> {
+  try {
+    const respuesta = await cliente.get<{ datos: ReporteDeDemora[] }>('/reportes-demora', {
+      params: { paradaId },
+    });
+    return respuesta.data.datos;
+  } catch (error) {
+    throw normalizarError(error);
+  }
+}
+
+// Suma una confirmación. Si ya la habías confirmado la API responde 200 igual.
+export async function confirmarReporte(reporteId: string): Promise<ReporteDeDemora> {
+  try {
+    const respuesta = await cliente.post<RespuestaUno<ReporteDeDemora>>(
+      `/reportes-demora/${encodeURIComponent(reporteId)}/confirmaciones`,
+    );
+    return respuesta.data.datos;
+  } catch (error) {
+    throw normalizarError(error);
+  }
+}

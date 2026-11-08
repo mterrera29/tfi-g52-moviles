@@ -1,7 +1,7 @@
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import * as ImagePicker from 'expo-image-picker';
 import { Stack, router, useLocalSearchParams } from 'expo-router';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useRef, useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -45,6 +45,7 @@ const ETIQUETA_MOTIVO: Record<MotivoDemora, string> = {
 export default function ReportarScreen() {
   const { colores } = useTema();
   const { sesion } = useSesion();
+  const queryClient = useQueryClient();
   const params = useLocalSearchParams<{ paradaId?: string; lineaId?: string }>();
   const paradaId = Array.isArray(params.paradaId) ? params.paradaId[0] : params.paradaId;
   const lineaInicial = Array.isArray(params.lineaId) ? params.lineaId[0] : params.lineaId;
@@ -171,6 +172,7 @@ export default function ReportarScreen() {
       setErrorAccion(resultado.mensaje);
       return;
     }
+    void queryClient.invalidateQueries({ queryKey: ['reportes', datos.paradaId] });
     setMensaje(resultado.mensaje);
     setFotoUri(null);
     setFotoMime(null);
