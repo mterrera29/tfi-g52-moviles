@@ -12,6 +12,10 @@ export default function LineaIdLayout() {
         headerTintColor: colores.headerTexto,
         contentStyle: { backgroundColor: colores.fondo },
       }}
-    />
+    >
+      {/* Título provisorio mientras carga: después cada pantalla pone el suyo. */}
+      <Stack.Screen name='index' options={{ title: 'Línea' }} />
+      <Stack.Screen name='mapa' options={{ title: 'Mapa de la línea' }} />
+    </Stack>
   );
 }
