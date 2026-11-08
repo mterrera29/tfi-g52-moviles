@@ -1,5 +1,6 @@
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import * as ImagePicker from 'expo-image-picker';
+import Ionicons from '@react-native-vector-icons/ionicons';
 import { Stack, router, useLocalSearchParams } from 'expo-router';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useRef, useState } from 'react';
@@ -9,6 +10,7 @@ import {
   ActivityIndicator,
   Image,
   KeyboardAvoidingView,
+  Modal,
   Platform,
   Pressable,
   ScrollView,
@@ -274,6 +276,44 @@ export default function ReportarScreen() {
       <Stack.Screen options={{ title: 'Reportar demora' }} />
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <ScrollView contentContainerStyle={estilos.scroll} keyboardShouldPersistTaps='handled'>
+          <Modal
+            visible={!!mensaje}
+            transparent
+            animationType='fade'
+            onRequestClose={() => setMensaje(null)}
+          >
+            <View style={estilos.splashFondo}>
+              <View
+                accessibilityRole='alert'
+                accessibilityLiveRegion='assertive'
+                style={[estilos.splashCaja, { backgroundColor: colores.fondo }]}
+              >
+                <View style={estilos.splashCirculo}>
+                  <Ionicons name='checkmark' size={72} color='#FFFFFF' />
+                </View>
+                <Text style={[estilos.splashTitulo, { color: colores.texto }]}>
+                  ¡Reporte enviado!
+                </Text>
+                <Text style={[estilos.splashTexto, { color: colores.textoSecundario }]}>
+                  {mensaje}
+                </Text>
+                <Pressable
+                  accessibilityRole='button'
+                  accessibilityLabel='Listo'
+                  onPress={() => {
+                    setMensaje(null);
+                    router.back();
+                  }}
+                  style={({ pressed }) => [
+                    estilos.boton,
+                    { backgroundColor: colores.acento, opacity: pressed ? 0.85 : 1, alignSelf: 'stretch' },
+                  ]}
+                >
+                  <Text style={{ color: colores.acentoTexto, fontWeight: '700', fontSize: 17 }}>Listo</Text>
+                </Pressable>
+              </View>
+            </View>
+          </Modal>
           <Text style={[estilos.texto, { color: colores.texto }]}>
             Parada {parada.nombre}. El reporte es de demora según lo que ves vos, no reemplaza los horarios de la tabla.
           </Text>
@@ -423,11 +463,6 @@ export default function ReportarScreen() {
               {errorAccion}
             </Text>
           ) : null}
-          {mensaje ? (
-            <Text accessibilityLiveRegion='polite' style={{ color: colores.texto }}>
-              {mensaje}
-            </Text>
-          ) : null}
 
           <Pressable
             accessibilityRole='button'
@@ -474,6 +509,37 @@ export default function ReportarScreen() {
 }
 
 const estilos = StyleSheet.create({
+  splashFondo: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.65)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 24,
+  },
+  splashCaja: {
+    alignSelf: 'stretch',
+    alignItems: 'center',
+    gap: 14,
+    padding: 24,
+    borderRadius: 20,
+  },
+  splashCirculo: {
+    width: 112,
+    height: 112,
+    borderRadius: 56,
+    backgroundColor: '#2E9E5B',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  splashTitulo: {
+    fontSize: 26,
+    fontWeight: '800',
+    textAlign: 'center',
+  },
+  splashTexto: {
+    fontSize: 16,
+    textAlign: 'center',
+  },
   contenedor: { flex: 1 },
   centrado: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24, gap: 16 },
   scroll: { padding: 16, gap: 12 },
