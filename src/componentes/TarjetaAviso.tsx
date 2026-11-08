@@ -1,6 +1,8 @@
-import { StyleSheet, Text, View } from 'react-native';
+import { Link } from 'expo-router';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import type { StyleProp, ViewStyle } from 'react-native';
 
+import { BadgeLinea } from '@/componentes/BadgeLinea';
 import { useTema } from '@/contextos/tema';
 import type { ColoresTema } from '@/temas/paleta';
 import type { Aviso, Gravedad } from '@/tipos/aviso';
@@ -26,9 +28,10 @@ function formatearFecha(iso: string) {
   });
 }
 
-export function TarjetaAviso({ aviso, lineasPorId, style }: {
+export function TarjetaAviso({ aviso, lineasPorId, videoGuardado = false, style }: {
   aviso: Aviso;
   lineasPorId: Record<string, Linea>;
+  videoGuardado?: boolean;
   style?: StyleProp<ViewStyle>;
 }) {
   const { colores } = useTema();
@@ -39,9 +42,9 @@ export function TarjetaAviso({ aviso, lineasPorId, style }: {
 
   return (
     <View
-      accessible
+      accessible={!aviso.videoUrl}
       accessibilityRole='text'
-      accessibilityLabel={`${etiquetaGravedad(aviso.gravedad)}. ${aviso.titulo}. Líneas ${numerosLineas}. ${aviso.detalle}. Desde ${formatearFecha(aviso.desde)}${aviso.hasta ? `. Hasta ${formatearFecha(aviso.hasta)}` : ''}`}
+      accessibilityLabel={`${etiquetaGravedad(aviso.gravedad)}. ${aviso.titulo}. Líneas ${numerosLineas}. ${aviso.detalle}. Desde ${formatearFecha(aviso.desde)}${aviso.hasta ? `. Hasta ${formatearFecha(aviso.hasta)}` : ''}${aviso.videoUrl ? videoGuardado ? '. Video guardado en el teléfono.' : '. Tiene video.' : ''}`}
       style={[
         estilos.tarjeta,
         { backgroundColor: colorGravedad(aviso.gravedad, colores) },
@@ -63,14 +66,7 @@ export function TarjetaAviso({ aviso, lineasPorId, style }: {
           }
   
           return (
-            <View
-              key={lineaId}
-              style={[estilos.badge, { backgroundColor: linea.color }]}
-              importantForAccessibility='no-hide-descendants'
-              accessibilityElementsHidden
-            >
-              <Text style={estilos.badgeNumero}>{linea.numero}</Text>
-            </View>
+            <BadgeLinea key={lineaId} numero={linea.numero} color={linea.color} tamano='medio' />
           );
         })}
       </View>
@@ -81,6 +77,19 @@ export function TarjetaAviso({ aviso, lineasPorId, style }: {
         Desde {formatearFecha(aviso.desde)}
         {aviso.hasta ? ` · Hasta ${formatearFecha(aviso.hasta)}` : ''}
       </Text>
+      {aviso.videoUrl ? (
+        <Link href={{ pathname: '/aviso/[id]', params: { id: aviso.id } }} asChild>
+          <Pressable
+            accessibilityRole='button'
+            accessibilityLabel={videoGuardado ? 'Ver video guardado' : 'Ver video del aviso'}
+            style={estilos.enlaceVideo}
+          >
+            <Text style={[estilos.enlaceVideoTexto, { color: colores.acento }]}>
+              {videoGuardado ? 'Video guardado · Ver' : 'Ver video'}
+            </Text>
+          </Pressable>
+        </Link>
+      ) : null}
     </View>
   );
 }
@@ -107,22 +116,18 @@ const estilos = StyleSheet.create({
     flexWrap: 'wrap',
     gap: 8,
   },
-  badge: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  badgeNumero: {
-    color: '#fff',
-    fontWeight: '700',
-    fontSize: 14,
-  },
   detalle: {
     fontSize: 15,
   },
   fecha: {
     fontSize: 13,
+  },
+  enlaceVideo: {
+    minHeight: 44,
+    justifyContent: 'center',
+  },
+  enlaceVideoTexto: {
+    fontSize: 15,
+    fontWeight: '600',
   },
 });

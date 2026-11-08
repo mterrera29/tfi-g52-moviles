@@ -8,8 +8,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { useTema } from '@/contextos/tema';
-import { obtenerAvisos } from '@/servicios/avisos';
-import { consultarLineas } from '@/servicios/consulta';
+import { consultarAvisos, consultarLineas } from '@/servicios/consulta';
 import type { RespuestaError } from '@/tipos/api';
 import { EstadoError } from '@/componentes/EstadoError';
 import { EstadoVacio } from '@/componentes/EstadoVacio';
@@ -17,7 +16,7 @@ import { TarjetaAviso } from '@/componentes/TarjetaAviso';
 
 export default function AvisosScreen() {
   const { colores } = useTema();
-  const consultaAvisos = useQuery<Awaited<ReturnType<typeof obtenerAvisos>>, RespuestaError>({ queryKey: ['avisos', 'vigentes'], queryFn: obtenerAvisos });
+  const consultaAvisos = useQuery<Awaited<ReturnType<typeof consultarAvisos>>, RespuestaError>({ queryKey: ['avisos', 'vigentes'], queryFn: consultarAvisos });
   const consultaLineas = useQuery<Awaited<ReturnType<typeof consultarLineas>>, RespuestaError>({ queryKey: ['lineas'], queryFn: consultarLineas });
   const avisos = consultaAvisos.data?.datos ?? [];
   const lineasPorId = Object.fromEntries((consultaLineas.data?.datos ?? []).map((linea) => [linea.id, linea]));
@@ -65,7 +64,7 @@ export default function AvisosScreen() {
         refreshing={consultaAvisos.isRefetching || consultaLineas.isRefetching}
         onRefresh={cargarAvisos}
         renderItem={({ item }) => (
-          <TarjetaAviso aviso={item} lineasPorId={lineasPorId} />
+          <TarjetaAviso aviso={item} lineasPorId={lineasPorId} videoGuardado={consultaAvisos.data?.videosGuardados.includes(item.id)} />
         )}
         ListEmptyComponent={<EstadoVacio mensaje='No hay avisos activos.' />}
         contentContainerStyle={
