@@ -38,6 +38,7 @@ import type { Aviso } from '@/tipos/aviso';
 import type { Feriado, RespuestaError, RespuestaLista, RespuestaUno } from '@/tipos/api';
 import type { Horario, TipoDeDia } from '@/tipos/horario';
 import type { Linea, Recorrido, Sentido } from '@/tipos/linea';
+import { guardarRecorridos, leerRecorridosGuardados } from '@/servicios/recorridosGuardados';
 import { elegirTipoDeDia } from '@/lib/tipoDeDia';
 import { resumirHorarios, type ResumenHorariosSentido } from '@/lib/resumenLinea';
 import type { Parada } from '@/tipos/parada';
@@ -103,12 +104,15 @@ export async function consultarLineas(): Promise<RespuestaLista<Linea>> {
     const respuesta = await cliente.get<RespuestaLista<Linea>>('/lineas', { params: { porPagina: 100 } });
     marcarSincronizacion(respuesta);
     await persistirLineas(db, respuesta.data.datos);
+    guardarRecorridos(respuesta.data.datos);
     void asegurarFeriadosEnSqlite().catch(() => {});
     return respuesta.data;
   } catch (error) {
     const normalizado = normalizarError(error);
     if (!esSinConexion(normalizado)) throw normalizado;
-    const datos = await leerLineas(db);
+    let datos = await leerLineas(db);
+    // Si SQLite no tiene nada, probamos con el archivo de recorridos guardado.
+    if (datos.length === 0) datos = (await leerRecorridosGuardados()) ?? [];
     if (datos.length === 0) throw normalizado;
     return { datos, meta: { total: datos.length, pagina: 1, porPagina: datos.length } };
   }
