@@ -11,7 +11,7 @@ import { consultarParadasCercanas } from '@/servicios/consulta';
 import type { RespuestaError } from '@/tipos/api';
 
 export default function MapaScreen() {
-  const { colores } = useTema();
+  const { colores, modo } = useTema();
   const { coordenadas, estado, pedirUbicacion } = useUbicacion();
   const latitud = coordenadas ? Number(coordenadas.latitud.toFixed(3)) : null;
   const longitud = coordenadas ? Number(coordenadas.longitud.toFixed(3)) : null;
@@ -25,7 +25,12 @@ export default function MapaScreen() {
   return (
     <SafeAreaView style={[estilos.contenedor, { backgroundColor: colores.fondo }]} edges={['bottom']}>
       <View style={estilos.mapa}>
-        <Mapa coordenadas={coordenadas} paradas={paradas} descripcion='Mapa de paradas cercanas. Tocá una parada y luego su nombre para abrir su detalle.' />
+        <Mapa
+          coordenadas={coordenadas}
+          paradas={paradas}
+          estiloInterfaz={modo === 'oscuro' ? 'dark' : 'light'}
+          descripcion='Mapa de paradas cercanas. Tocá una parada y luego su nombre para abrir su detalle. Cada parada es un cartel con un colectivo, no un vehículo en movimiento.'
+        />
       </View>
       <ScrollView style={estilos.panel} contentContainerStyle={estilos.contenido}>
         <Text style={{ color: colores.texto }}>
