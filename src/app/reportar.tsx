@@ -19,6 +19,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { BadgeLinea } from '@/componentes/BadgeLinea';
 import { EstadoError } from '@/componentes/EstadoError';
 import { useSesion } from '@/contextos/sesion';
 import { useTema } from '@/contextos/tema';
@@ -291,16 +292,16 @@ export default function ReportarScreen() {
                     accessibilityLabel={`Línea ${linea.numero}`}
                     onPress={() => onChange(linea.id)}
                     style={({ pressed }) => [
-                      estilos.chip,
                       {
-                        backgroundColor: value === linea.id ? colores.acento : colores.fondoSecundario,
-                        opacity: pressed ? 0.7 : 1,
+                        padding: 4,
+                        borderRadius: 14,
+                        borderWidth: 2,
+                        borderColor: value === linea.id ? colores.acento : 'transparent',
+                        opacity: pressed ? 0.7 : value === linea.id ? 1 : 0.7,
                       },
                     ]}
                   >
-                    <Text style={{ color: value === linea.id ? colores.acentoTexto : colores.texto, fontWeight: '700' }}>
-                      {linea.numero}
-                    </Text>
+                    <BadgeLinea numero={linea.numero} color={linea.color} tamano='medio' />
                   </Pressable>
                 ))}
               </View>
