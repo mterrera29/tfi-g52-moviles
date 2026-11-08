@@ -14,10 +14,18 @@ type FilaLineaProps = {
   linea: Linea;
   esGrilla: boolean;
   colores: ColoresTema;
+  estado?: 'desvio' | 'suspension' | null;
 };
 
-export function FilaLinea({ linea, esGrilla, colores }: FilaLineaProps) {
+export function FilaLinea({ linea, esGrilla, colores, estado = null }: FilaLineaProps) {
   const escala = useSharedValue(1);
+  const estadoVisible = !linea.activa
+    ? 'Fuera de servicio'
+    : estado === 'suspension'
+      ? 'Servicio suspendido'
+      : estado === 'desvio'
+        ? 'Hoy tiene un desvío'
+        : null;
   const estiloAnimado = useAnimatedStyle(() => ({
     transform: [{ scale: escala.value }],
   }));
@@ -26,7 +34,7 @@ export function FilaLinea({ linea, esGrilla, colores }: FilaLineaProps) {
     <Animated.View style={[esGrilla ? estilos.celdaAnimada : undefined, estiloAnimado]}>
       <Pressable
         accessibilityRole='button'
-        accessibilityLabel={`Línea ${linea.numero}, ${linea.nombre}`}
+        accessibilityLabel={`Línea ${linea.numero}, ${linea.nombre}${estadoVisible ? `. ${estadoVisible}` : ''}`}
         accessibilityHint='Abre el detalle de la línea'
         hitSlop={8}
         onPressIn={() => {
@@ -60,6 +68,9 @@ export function FilaLinea({ linea, esGrilla, colores }: FilaLineaProps) {
           <Text style={[estilos.empresa, { color: colores.textoSecundario }]}>
             {linea.empresa}
           </Text>
+          {estadoVisible ? (
+            <Text style={[estilos.estado, { color: colores.error }]}>{estadoVisible}</Text>
+          ) : null}
         </View>
       </Pressable>
     </Animated.View>
@@ -90,4 +101,5 @@ const estilos = StyleSheet.create({
   },
   nombre: { fontSize: 16, fontWeight: '600' },
   empresa: { fontSize: 14 },
+  estado: { fontSize: 13, fontWeight: '700', marginTop: 2 },
 });
