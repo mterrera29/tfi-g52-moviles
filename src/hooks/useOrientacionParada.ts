@@ -85,6 +85,8 @@ export function useOrientacionParada(destino: Coordenadas | null, paradaId: stri
   const [rotacion, setRotacion] = useState<number | null>(null);
   const [distancia, setDistancia] = useState<number | null>(null);
   const [enLaParada, setEnLaParada] = useState(false);
+  // Qué señales llegaron ya: sirve para decirle al usuario qué falta mientras busca.
+  const [senales, setSenales] = useState({ gps: false, brujula: false });
   const [avisos, setAvisos] = useState<AvisoOrientacion>({
     postura: null,
     calibracion: null,
@@ -174,6 +176,12 @@ export function useOrientacionParada(destino: Coordenadas | null, paradaId: stri
     let lecturasMalas = 0;
     setCargando(true);
     setError(null);
+    setSenales({ gps: false, brujula: false });
+
+    const marcarSenales = () =>
+      setSenales((previo) =>
+        previo.gps === gpsOk && previo.brujula === magOk ? previo : { gps: gpsOk, brujula: magOk },
+      );
 
     const vigente = () => sesionVigente(cancelado, sesion, sesionRef.current);
 
@@ -215,6 +223,7 @@ export function useOrientacionParada(destino: Coordenadas | null, paradaId: stri
     const invalidarGpsVivoVencido = () => {
       rumboDestinoRef.current = null;
       gpsOk = false;
+      marcarSenales();
       setDistancia(null);
       setEnLaParada(false);
       rotacionRef.current = null;
@@ -290,6 +299,7 @@ export function useOrientacionParada(destino: Coordenadas | null, paradaId: stri
         }
 
         gpsOk = true;
+        marcarSenales();
         if (esVivo) ultimoFixVivoMs = Date.now();
 
         const metros = distanciaEntre(coords, destinoVivo);
@@ -336,6 +346,7 @@ export function useOrientacionParada(destino: Coordenadas | null, paradaId: stri
           if (lecturasMalas < 5) return;
           filtroMag = null;
           magOk = false;
+          marcarSenales();
           rumboTelRef.current = null;
           rotacionRef.current = null;
           setRotacion(null);
@@ -349,6 +360,7 @@ export function useOrientacionParada(destino: Coordenadas | null, paradaId: stri
         lecturasMalas = 0;
         filtroMag = actualizado.suave;
         magOk = true;
+        marcarSenales();
         rumboTelRef.current = actualizado.rumbo;
         setAvisos((prev) => ({
           ...prev,
@@ -439,6 +451,7 @@ export function useOrientacionParada(destino: Coordenadas | null, paradaId: stri
     rotacion,
     distancia,
     enLaParada,
+    senales,
     avisos,
     orientar,
     detener,

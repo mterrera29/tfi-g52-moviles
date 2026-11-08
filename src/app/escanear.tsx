@@ -1,7 +1,7 @@
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import { router } from 'expo-router';
 import { useState } from 'react';
-import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Linking, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { useTema } from '@/contextos/tema';
@@ -54,14 +54,18 @@ export default function EscanearScreen() {
         </Text>
         <Pressable
           accessibilityRole='button'
-          accessibilityLabel='Permitir cámara'
-          onPress={() => { void pedirPermiso(); }}
+          accessibilityLabel={permiso.canAskAgain ? 'Permitir cámara' : 'Abrir los ajustes del teléfono'}
+          onPress={() => {
+            // canAskAgain en false: el sistema no vuelve a preguntar, solo se cambia desde Ajustes.
+            if (permiso.canAskAgain) void pedirPermiso();
+            else void Linking.openSettings();
+          }}
           style={({ pressed }) => [
             estilos.boton,
             { backgroundColor: colores.acento, opacity: pressed ? 0.7 : 1 },
           ]}
         >
-          <Text style={[estilos.textoBoton, { color: colores.acentoTexto }]}>Permitir cámara</Text>
+          <Text style={[estilos.textoBoton, { color: colores.acentoTexto }]}>{permiso.canAskAgain ? 'Permitir cámara' : 'Abrir Ajustes'}</Text>
         </Pressable>
         <Pressable
           accessibilityRole='button'

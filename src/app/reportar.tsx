@@ -10,6 +10,7 @@ import {
   ActivityIndicator,
   Image,
   KeyboardAvoidingView,
+  Linking,
   Modal,
   Platform,
   Pressable,
@@ -60,6 +61,8 @@ export default function ReportarScreen() {
   const [enviando, setEnviando] = useState(false);
   const [mensaje, setMensaje] = useState<string | null>(null);
   const [errorAccion, setErrorAccion] = useState<string | null>(null);
+  // Permiso bloqueado (canAskAgain en false): el cartel no vuelve a salir, solo desde Ajustes.
+  const [permisoBloqueado, setPermisoBloqueado] = useState(false);
   const [pendientes, setPendientes] = useState<ItemColaReporte[]>([]);
 
   const consulta = useQuery({
@@ -106,6 +109,7 @@ export default function ReportarScreen() {
 
   async function sacarFoto() {
     setErrorAccion(null);
+    setPermisoBloqueado(false);
     if (Platform.OS === 'web') {
       setErrorAccion('En la web no se puede sacar foto con la cámara de la cátedra.');
       return;
@@ -113,6 +117,7 @@ export default function ReportarScreen() {
     if (!permisoCamara?.granted) {
       const resultado = await pedirPermisoCamara();
       if (!resultado.granted) {
+        setPermisoBloqueado(!resultado.canAskAgain);
         setErrorAccion('Sin permiso de cámara no se puede sacar la foto. Podés elegir una de la galería.');
         return;
       }
@@ -135,9 +140,11 @@ export default function ReportarScreen() {
 
   async function elegirDeGaleria() {
     setErrorAccion(null);
+    setPermisoBloqueado(false);
     try {
       const permiso = await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (!permiso.granted) {
+        setPermisoBloqueado(!permiso.canAskAgain);
         setErrorAccion('Sin permiso de galería no se puede elegir una foto.');
         return;
       }
@@ -462,6 +469,19 @@ export default function ReportarScreen() {
             <Text accessibilityRole='alert' style={{ color: colores.error }}>
               {errorAccion}
             </Text>
+          ) : null}
+          {permisoBloqueado ? (
+            <Pressable
+              accessibilityRole='button'
+              accessibilityLabel='Abrir los ajustes del teléfono'
+              onPress={() => { void Linking.openSettings(); }}
+              style={({ pressed }) => [
+                estilos.botonSecundario,
+                { borderColor: colores.acento, opacity: pressed ? 0.7 : 1 },
+              ]}
+            >
+              <Text style={{ color: colores.acento, fontWeight: '600' }}>Abrir Ajustes</Text>
+            </Pressable>
           ) : null}
 
           <Pressable
