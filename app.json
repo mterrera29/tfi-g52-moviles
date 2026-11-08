@@ -51,9 +51,23 @@
         }
       ],
       [
+        "expo-image-picker",
+        {
+          "photosPermission": "Elegimos una foto de la galería para el reporte de demora",
+          "cameraPermission": "Sacamos la foto del reporte de demora"
+        }
+      ],
+      [
         "expo-local-authentication",
         {
           "faceIDPermission": "Usamos Face ID para reingresar a tu cuenta"
+        }
+      ],
+      [
+        "expo-notifications",
+        {
+          "color": "#0B3A5D",
+          "defaultChannel": "avisos-lineas"
         }
       ]
     ],
