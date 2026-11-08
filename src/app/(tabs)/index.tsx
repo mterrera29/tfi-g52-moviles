@@ -19,9 +19,9 @@ import { FilaLinea } from '@/componentes/FilaLinea';
 import { TarjetaAviso } from '@/componentes/TarjetaAviso';
 import { useSesion } from '@/contextos/sesion';
 import { useTema } from '@/contextos/tema';
+import { CartelParada } from '@/componentes/CartelParada';
 import { useFavoritos } from '@/hooks/useFavoritos';
-import { obtenerAvisos } from '@/servicios/avisos';
-import { consultarLineas, consultarParadas } from '@/servicios/consulta';
+import { consultarAvisos, consultarLineas, consultarParadas } from '@/servicios/consulta';
 import type { RespuestaError } from '@/tipos/api';
 
 export default function InicioScreen() {
@@ -40,10 +40,9 @@ export default function InicioScreen() {
     queryFn: () => consultarParadas(),
     enabled: !!sesion,
   });
-  const consultaAvisos = useQuery<Awaited<ReturnType<typeof obtenerAvisos>>, RespuestaError>({
+  const consultaAvisos = useQuery<Awaited<ReturnType<typeof consultarAvisos>>, RespuestaError>({
     queryKey: ['avisos', 'vigentes'],
-    queryFn: obtenerAvisos,
-    enabled: !sinConexion,
+    queryFn: consultarAvisos,
   });
   const lineasFavoritas = (consultaLineas.data?.datos ?? []).filter((linea) =>
     consultaUsuario.lineasFavoritas.includes(linea.id),
@@ -66,7 +65,7 @@ export default function InicioScreen() {
     (consultaUsuario.lineasFavoritas.length > 0 && consultaLineas.isPending) ||
     (consultaUsuario.paradasFavoritas.length > 0 && consultaParadas.isPending);
   const errorAvisos = consultaAvisos.error ?? consultaLineas.error;
-  const avisosSinRed = sinConexion || consultaAvisos.error?.error.codigo === 'SIN_CONEXION';
+  const avisosSinRed = !consultaAvisos.data && (sinConexion || consultaAvisos.error?.error.codigo === 'SIN_CONEXION');
   const cantidadAvisos = !avisosSinRed && !consultaAvisos.isFetching && consultaAvisos.isSuccess
     ? consultaAvisos.data.datos.length
     : null;
@@ -112,17 +111,20 @@ export default function InicioScreen() {
         }
       >
         <View style={[estilos.hero, { backgroundColor: colores.headerFondo }]}>
-          <View style={estilos.marca}>
-            <Ionicons name='bus-outline' size={24} color={colores.headerTexto} accessible={false} />
-            <Text accessibilityRole='header' style={[estilos.nombreApp, { color: colores.headerTexto }]}>Transporte Público</Text>
-          </View>
-          {empresas ? <Text style={[estilos.empresas, { color: colores.headerTexto }]}>{empresas}</Text> : null}
-          <Text style={[estilos.saludo, { color: colores.headerTexto }]}>
+          <Text accessibilityRole='header' style={[estilos.saludo, { color: colores.headerTexto }]}>
             {nombreUsuario ? `Hola, ${nombreUsuario}` : 'Hola'}
           </Text>
           <Text style={[estilos.descripcionHero, { color: colores.headerTexto }]}>
             Consultá líneas, paradas y avisos de Paraná para organizar tu viaje.
           </Text>
+          <View style={[estilos.separadorHero, { backgroundColor: colores.headerTexto }]} />
+          <View style={estilos.marca}>
+            <View style={estilos.logoMarca}>
+              <Ionicons name='bus' size={18} color='#0D3A5C' accessible={false} />
+            </View>
+            <Text style={[estilos.nombreApp, { color: colores.headerTexto }]}>Transporte Público</Text>
+          </View>
+          {empresas ? <Text style={[estilos.empresas, { color: colores.headerTexto }]}>{empresas}</Text> : null}
         </View>
 
         <View style={estilos.seccion}>
@@ -198,8 +200,11 @@ export default function InicioScreen() {
                     accessibilityHint='Abre el detalle de la parada'
                     style={({ pressed }) => [estilos.filaParada, { borderColor: colores.borde, backgroundColor: pressed ? colores.fondoSecundario : colores.fondo }]}
                   >
-                    <Text style={[estilos.parada, { color: colores.texto }]}>{parada.nombre}</Text>
-                    <Text style={{ color: colores.textoSecundario }}>Parada · {parada.sentido}</Text>
+                    <CartelParada />
+                    <View style={{ flex: 1 }}>
+                      <Text style={[estilos.parada, { color: colores.texto }]}>{parada.nombre}</Text>
+                      <Text style={{ color: colores.textoSecundario }}>Parada · {parada.sentido}</Text>
+                    </View>
                   </Pressable>
               ))}
             </>
@@ -225,7 +230,7 @@ export default function InicioScreen() {
           ) : avisos.length === 0 ? (
             <EstadoVacio mensaje='No hay avisos activos.' />
           ) : avisos.map((aviso) => (
-            <TarjetaAviso key={aviso.id} aviso={aviso} lineasPorId={lineasPorId} style={estilos.aviso} />
+            <TarjetaAviso key={aviso.id} aviso={aviso} lineasPorId={lineasPorId} videoGuardado={consultaAvisos.data?.videosGuardados.includes(aviso.id)} style={estilos.aviso} />
           ))}
         </View>
       </ScrollView>
@@ -236,11 +241,13 @@ export default function InicioScreen() {
 const estilos = StyleSheet.create({
   contenedor: { flex: 1 },
   scroll: { paddingTop: 16, paddingBottom: 24, gap: 24 },
-  hero: { marginHorizontal: 16, padding: 24, borderRadius: 20, gap: 12 },
-  marca: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  nombreApp: { flex: 1, fontSize: 22, fontWeight: '700' },
-  empresas: { fontSize: 13, lineHeight: 20 },
-  saludo: { marginTop: 8, fontSize: 28, fontWeight: '700' },
+  hero: { marginHorizontal: 16, padding: 24, borderRadius: 20, gap: 8 },
+  marca: { flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 4 },
+  logoMarca: { width: 30, height: 30, borderRadius: 8, backgroundColor: '#FDBB45', alignItems: 'center', justifyContent: 'center' },
+  separadorHero: { height: StyleSheet.hairlineWidth, opacity: 0.3, marginTop: 8 },
+  nombreApp: { flex: 1, fontSize: 16, fontWeight: '700' },
+  empresas: { fontSize: 12, lineHeight: 18, opacity: 0.75 },
+  saludo: { fontSize: 30, fontWeight: '700' },
   descripcionHero: { fontSize: 16, lineHeight: 24 },
   seccion: { paddingHorizontal: 16, gap: 12 },
   titulo: { fontSize: 20, fontWeight: '700' },
@@ -257,7 +264,7 @@ const estilos = StyleSheet.create({
   botonTexto: { fontSize: 16, fontWeight: '600' },
   enlace: { minHeight: 48, minWidth: 48, paddingHorizontal: 12, justifyContent: 'center' },
   enlaceFavoritos: { minHeight: 48, alignSelf: 'flex-start', flexDirection: 'row', alignItems: 'center', paddingHorizontal: 8, gap: 8 },
-  filaParada: { minHeight: 72, padding: 16, gap: 4, borderWidth: 1, borderRadius: 16 },
+  filaParada: { minHeight: 72, padding: 16, gap: 12, flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderRadius: 16 },
   parada: { fontSize: 16, fontWeight: '600' },
   aviso: { marginHorizontal: 0, marginTop: 0 },
 });
