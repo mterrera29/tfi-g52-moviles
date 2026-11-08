@@ -3,13 +3,16 @@ import type { AxiosResponse } from 'axios';
 import { obtenerConexion } from '@/db/conexion';
 import {
   fechaDesdeCabecera,
+  leerAvisoPorId,
+  leerAvisos,
+  leerEstadoHorariosParada,
   leerFeriados,
-  leerHorariosParada,
   leerLineaPorId,
   leerLineas,
   leerParadaPorId,
   leerParadas,
   leerParadasPorIds,
+  persistirAvisos,
   persistirFeriados,
   persistirHorariosParada,
   persistirLinea,
@@ -19,18 +22,24 @@ import {
   registrarUltimaSincronizacion,
 } from '@/db/sqlite';
 import {
-  mensajeSinProximosServicio,
   proximosHorariosDesdeTabla,
+  resolverProximosParada,
   todosHorariosParada,
 } from '@/lib/proximosHorarios';
-import { obtenerAvisosPorLinea } from '@/servicios/avisos';
+import { partesParana } from '@/lib/zonaParana';
+import { avisoVigente } from '@/lib/avisoVigente';
+import { distanciaMetros } from '@/lib/rumboParada';
+import { obtenerAvisos, obtenerAvisosPorLinea } from '@/servicios/avisos';
+import { descargaDeAvisoEsLocal } from '@/servicios/videoAviso';
 import { cliente, normalizarError } from '@/servicios/cliente';
 import { obtenerFeriados } from '@/servicios/feriados';
 import { obtenerHorariosPorParada, obtenerProximosHorariosPorParada } from '@/servicios/horarios';
 import type { Aviso } from '@/tipos/aviso';
-import type { RespuestaError, RespuestaLista, RespuestaUno } from '@/tipos/api';
+import type { Feriado, RespuestaError, RespuestaLista, RespuestaUno } from '@/tipos/api';
 import type { Horario, TipoDeDia } from '@/tipos/horario';
-import type { Linea, Recorrido } from '@/tipos/linea';
+import type { Linea, Recorrido, Sentido } from '@/tipos/linea';
+import { elegirTipoDeDia } from '@/lib/tipoDeDia';
+import { resumirHorarios, type ResumenHorariosSentido } from '@/lib/resumenLinea';
 import type { Parada } from '@/tipos/parada';
 
 const TIPOS_DE_DIA: TipoDeDia[] = ['habil', 'sabado', 'domingo', 'feriado'];
@@ -53,12 +62,29 @@ let feriadosSincronizados = false;
 async function asegurarFeriadosEnSqlite(): Promise<void> {
   if (feriadosSincronizados) return;
   const db = obtenerConexion();
-  const anios = [new Date().getFullYear(), new Date().getFullYear() + 1];
+  const anioParana = Number(partesParana(new Date()).ymd.slice(0, 4));
+  const anios = [anioParana, anioParana + 1];
   const listas = await Promise.all(anios.map((anio) => obtenerFeriados(anio)));
   const feriados = listas.flatMap((lista) => lista.datos);
   await persistirFeriados(db, feriados);
   feriadosSincronizados = true;
   registrarUltimaSincronizacion(new Date().toISOString());
+}
+
+async function calendarioListoDesdeSqlite(
+  db: ReturnType<typeof obtenerConexion>,
+  intentarRed: boolean,
+): Promise<boolean> {
+  if (intentarRed) {
+    try {
+      await asegurarFeriadosEnSqlite();
+      return true;
+    } catch {
+      // El contrato no distingue lista vacía confirmada de feriados no bajados.
+    }
+  }
+  const guardados = await leerFeriados(db);
+  return guardados.length > 0;
 }
 
 async function persistirHorariosCompletosParada(paradaId: string): Promise<void> {
@@ -144,16 +170,6 @@ export async function consultarParadasCercanas({
   }
 }
 
-function distanciaMetros(lat1: number, lon1: number, lat2: number, lon2: number): number {
-  const radio = 6371000;
-  const dLat = ((lat2 - lat1) * Math.PI) / 180;
-  const dLon = ((lon2 - lon1) * Math.PI) / 180;
-  const a =
-    Math.sin(dLat / 2) ** 2 +
-    Math.cos((lat1 * Math.PI) / 180) * Math.cos((lat2 * Math.PI) / 180) * Math.sin(dLon / 2) ** 2;
-  return radio * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-}
-
 export type LineaDetalleConsulta = {
   linea: Linea;
   recorridos: Array<Recorrido & { paradas: Parada[] }>;
@@ -179,8 +195,11 @@ export async function consultarLineaDetalle(lineaId: string): Promise<LineaDetal
     try {
       const respuestaAvisos = await obtenerAvisosPorLinea(lineaId);
       avisos = respuestaAvisos.datos;
+      await persistirAvisos(db, avisos);
     } catch {
-      avisos = [];
+      avisos = (await leerAvisos(db)).filter(
+        (aviso) => aviso.lineaIds.includes(lineaId) && avisoVigente(aviso),
+      );
     }
 
     const recorridos = linea.recorridos.map((recorrido) => {
@@ -206,7 +225,11 @@ export async function consultarLineaDetalle(lineaId: string): Promise<LineaDetal
       })),
     );
 
-    return { linea, recorridos, avisos: [] };
+    const avisos = (await leerAvisos(db)).filter(
+      (aviso) => aviso.lineaIds.includes(lineaId) && avisoVigente(aviso),
+    );
+
+    return { linea, recorridos, avisos };
   }
 }
 
@@ -214,6 +237,11 @@ export type ParadaDetalleConsulta = {
   parada: Parada;
   lineas: Linea[];
   horarios: Horario[];
+  tablas: Horario[];
+  feriados: Feriado[];
+  calendarioListo: boolean;
+  tablasCompletas: boolean;
+  consultadoEn: string;
   mensajeSinHorarios: string | null;
 };
 
@@ -222,21 +250,33 @@ async function armarDetalleParada(
   parada: Parada,
   lineas: Linea[],
   horarios: Horario[],
+  calendarioListo: boolean,
+  consultadoEn: Date,
 ): Promise<ParadaDetalleConsulta> {
   const feriados = await leerFeriados(db);
-  const porTipo = Object.fromEntries(
-    await Promise.all(
-      TIPOS_DE_DIA.map(async (tipo) => [tipo, await leerHorariosParada(db, parada.id, tipo)] as const),
-    ),
-  ) as Partial<Record<TipoDeDia, Horario[]>>;
-  const tablas = todosHorariosParada(porTipo);
+  const estadoTablas = await leerEstadoHorariosParada(db, parada.id);
+  const tablas = todosHorariosParada(estadoTablas.porTipo);
+  const resuelto = resolverProximosParada({
+    tablas,
+    fallbackApi: horarios,
+    feriados,
+    cantidad: 3,
+    ahora: consultadoEn,
+    obtenidoEn: consultadoEn,
+    calendarioListo,
+    tablasCompletas: estadoTablas.completa,
+  });
 
   return {
     parada,
     lineas,
     horarios,
-    mensajeSinHorarios:
-      horarios.length === 0 ? mensajeSinProximosServicio(tablas, feriados) : null,
+    tablas,
+    feriados,
+    calendarioListo,
+    tablasCompletas: estadoTablas.completa,
+    consultadoEn: consultadoEn.toISOString(),
+    mensajeSinHorarios: resuelto.mensajeVacio,
   };
 }
 
@@ -251,17 +291,14 @@ export async function consultarParadaDetalle(paradaId: string, cantidad = 3): Pr
     marcarSincronizacion(respuestaParada);
     await persistirParada(db, respuestaParada.data.datos);
     await persistirLineas(db, respuestaLineas.data.datos);
-    void persistirHorariosCompletosParada(paradaId).catch(() => {});
-    void asegurarFeriadosEnSqlite().catch(() => {});
+    await persistirHorariosCompletosParada(paradaId).catch(() => {});
+    const calendarioListo = await calendarioListoDesdeSqlite(db, true);
 
     const parada = respuestaParada.data.datos;
     const lineas = respuestaLineas.data.datos.filter((linea) => parada.lineaIds.includes(linea.id));
     const horarios = respuestaHorarios.datos;
-    if (horarios.length === 0) {
-      await persistirHorariosCompletosParada(paradaId).catch(() => {});
-    }
 
-    return armarDetalleParada(db, parada, lineas, horarios);
+    return armarDetalleParada(db, parada, lineas, horarios, calendarioListo, new Date());
   } catch (error) {
     const normalizado = normalizarError(error);
     if (!esSinConexion(normalizado)) throw normalizado;
@@ -272,14 +309,15 @@ export async function consultarParadaDetalle(paradaId: string, cantidad = 3): Pr
     const lineasTodas = await leerLineas(db);
     const lineas = lineasTodas.filter((linea) => parada.lineaIds.includes(linea.id));
     const feriados = await leerFeriados(db);
-    const porTipo = Object.fromEntries(
-      await Promise.all(
-        TIPOS_DE_DIA.map(async (tipo) => [tipo, await leerHorariosParada(db, paradaId, tipo)] as const),
-      ),
-    ) as Partial<Record<TipoDeDia, Horario[]>>;
-    const horarios = proximosHorariosDesdeTabla(todosHorariosParada(porTipo), feriados, cantidad);
+    const calendarioListo = feriados.length > 0;
+    const estadoTablas = await leerEstadoHorariosParada(db, paradaId);
+    const tablas = todosHorariosParada(estadoTablas.porTipo);
+    const horarios =
+      calendarioListo && estadoTablas.completa
+        ? proximosHorariosDesdeTabla(tablas, feriados, cantidad).map((item) => item.horario)
+        : [];
 
-    return armarDetalleParada(db, parada, lineas, horarios);
+    return armarDetalleParada(db, parada, lineas, horarios, calendarioListo, new Date());
   }
 }
 
@@ -297,4 +335,88 @@ export async function consultarParadaPorId(id: string): Promise<RespuestaUno<Par
     if (!parada) throw normalizado;
     return { datos: parada, meta: null };
   }
+}
+
+export type ConsultaAvisos = RespuestaLista<Aviso> & {
+  videosGuardados: string[];
+};
+
+async function idsVideosGuardados(avisos: Aviso[]): Promise<string[]> {
+  const ids: string[] = [];
+  for (const aviso of avisos) {
+    if (await descargaDeAvisoEsLocal(aviso)) ids.push(aviso.id);
+  }
+  return ids;
+}
+
+export async function consultarAvisos(): Promise<ConsultaAvisos> {
+  const db = obtenerConexion();
+  try {
+    const respuesta = await obtenerAvisos();
+    await persistirAvisos(db, respuesta.datos);
+    return {
+      ...respuesta,
+      videosGuardados: await idsVideosGuardados(respuesta.datos),
+    };
+  } catch (error) {
+    const normalizado = normalizarError(error);
+    if (!esSinConexion(normalizado)) throw normalizado;
+    const datos = (await leerAvisos(db)).filter((aviso) => avisoVigente(aviso));
+    if (datos.length === 0) throw normalizado;
+    return {
+      datos,
+      meta: { total: datos.length, pagina: 1, porPagina: datos.length },
+      videosGuardados: await idsVideosGuardados(datos),
+    };
+  }
+}
+
+export async function consultarAvisoPorId(id: string): Promise<{ aviso: Aviso; videoGuardado: boolean }> {
+  const db = obtenerConexion();
+  try {
+    const respuesta = await obtenerAvisos();
+    await persistirAvisos(db, respuesta.datos);
+    const deRed = respuesta.datos.find((aviso) => aviso.id === id);
+    if (deRed) {
+      return { aviso: deRed, videoGuardado: await descargaDeAvisoEsLocal(deRed) };
+    }
+  } catch (error) {
+    const normalizado = normalizarError(error);
+    if (!esSinConexion(normalizado)) throw normalizado;
+  }
+
+  const local = await leerAvisoPorId(db, id);
+  if (local && avisoVigente(local)) {
+    return { aviso: local, videoGuardado: await descargaDeAvisoEsLocal(local) };
+  }
+  throw {
+    error: {
+      codigo: 'NO_ENCONTRADO',
+      mensaje: 'Ese aviso no está vigente o no está guardado en el teléfono.',
+    },
+  } satisfies RespuestaError;
+}
+
+export type HorariosLineaHoy = {
+  tipoDeDia: TipoDeDia;
+  porSentido: Array<{ sentido: Sentido; resumen: ResumenHorariosSentido }>;
+};
+
+/** Primer/último servicio y frecuencia de hoy, tomados de la primera parada de cada sentido. */
+export async function consultarHorariosLineaHoy(
+  lineaId: string,
+  recorridos: Array<Recorrido & { paradas: Parada[] }>,
+): Promise<HorariosLineaHoy | null> {
+  const db = obtenerConexion();
+  const feriados = await leerFeriados(db);
+  const tipoDeDia = elegirTipoDeDia(new Date(), feriados);
+  const porSentido: HorariosLineaHoy['porSentido'] = [];
+  for (const recorrido of recorridos) {
+    const primera = recorrido.paradas[0];
+    if (!primera) continue;
+    const respuesta = await obtenerHorariosPorParada(primera.id, tipoDeDia);
+    const resumen = resumirHorarios(respuesta.datos, lineaId, recorrido.sentido);
+    if (resumen) porSentido.push({ sentido: recorrido.sentido, resumen });
+  }
+  return porSentido.length ? { tipoDeDia, porSentido } : null;
 }

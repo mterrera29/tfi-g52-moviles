@@ -21,6 +21,7 @@ import { queryClient } from '@/servicios/queryClient';
 import { borrarToken, leerToken } from '@/servicios/token';
 import type { DatosLogin, DatosRegistro } from '@/esquemas/auth';
 import type { RespuestaError, Sesion } from '@/tipos/api';
+import type { Usuario } from '@/tipos/usuario';
 
 type SesionContextoValor = {
   sesion: Sesion | null;
@@ -32,6 +33,7 @@ type SesionContextoValor = {
   iniciarSesion: (datos: DatosLogin) => Promise<RespuestaError['error'] | null>;
   registrar: (datos: DatosRegistro) => Promise<RespuestaError['error'] | null>;
   cerrarSesion: () => Promise<void>;
+  actualizarUsuarioEnMemoria: (cambios: Partial<Usuario>) => void;
 };
 
 const SesionContexto = createContext<SesionContextoValor | null>(null);
@@ -60,6 +62,15 @@ export function SesionProvider({ children }: { children: ReactNode }) {
     establecerToken(nuevaSesion?.token ?? null);
     setSesion(nuevaSesion);
   }, []);
+
+  const actualizarUsuarioEnMemoria = useCallback((cambios: Partial<Usuario>) => {
+    const actual = sesionActual.current;
+    if (!actual) return;
+    actualizarSesion({
+      ...actual,
+      usuario: { ...actual.usuario, ...cambios },
+    });
+  }, [actualizarSesion]);
 
   const cerrarSesion = useCallback(async () => {
     // Se limpia memoria y caché incluso si falla el llavero del dispositivo.
@@ -140,8 +151,9 @@ export function SesionProvider({ children }: { children: ReactNode }) {
       iniciarSesion,
       registrar,
       cerrarSesion,
+      actualizarUsuarioEnMemoria,
     }),
-    [sesion, restaurando, bloqueada, reintentarBiometria, ingresarConContrasena, errorCierre, iniciarSesion, registrar, cerrarSesion],
+    [sesion, restaurando, bloqueada, reintentarBiometria, ingresarConContrasena, errorCierre, iniciarSesion, registrar, cerrarSesion, actualizarUsuarioEnMemoria],
   );
 
   return <SesionContexto.Provider value={valor}>{children}</SesionContexto.Provider>;

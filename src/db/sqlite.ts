@@ -3,9 +3,18 @@ import type { SQLiteDatabase } from 'expo-sqlite';
 import { guardarTexto } from '@/lib/almacenClaveValor';
 import { CLAVES } from '@/servicios/claves';
 import type { Feriado } from '@/tipos/api';
+import type { Aviso } from '@/tipos/aviso';
 import type { Horario, TipoDeDia } from '@/tipos/horario';
 import type { Linea } from '@/tipos/linea';
 import type { Parada } from '@/tipos/parada';
+import type { ItemColaReporte } from '@/lib/colaReportes';
+
+export type VideoAvisoGuardado = {
+  avisoId: string;
+  videoUrl: string;
+  archivoUri: string;
+  bytes: number;
+};
 
 export function fechaDesdeCabecera(fechaHttp: string | undefined): string {
   if (fechaHttp) {
@@ -103,6 +112,8 @@ export async function leerParadasPorIds(db: SQLiteDatabase, ids: string[]): Prom
   return ids.map((id) => porId.get(id)).filter((parada): parada is Parada => !!parada);
 }
 
+const TIPOS_DE_DIA: TipoDeDia[] = ['habil', 'sabado', 'domingo', 'feriado'];
+
 export async function leerHorariosParada(
   db: SQLiteDatabase,
   paradaId: string,
@@ -116,6 +127,117 @@ export async function leerHorariosParada(
   return fila ? (JSON.parse(fila.datos) as Horario[]) : [];
 }
 
+export async function leerEstadoHorariosParada(
+  db: SQLiteDatabase,
+  paradaId: string,
+): Promise<{ completa: boolean; porTipo: Partial<Record<TipoDeDia, Horario[]>> }> {
+  const filas = await db.getAllAsync<{ tipo_de_dia: TipoDeDia; datos: string }>(
+    'SELECT tipo_de_dia, datos FROM horarios WHERE parada_id = ?',
+    paradaId,
+  );
+  const porTipo: Partial<Record<TipoDeDia, Horario[]>> = {};
+  for (const fila of filas) {
+    porTipo[fila.tipo_de_dia] = JSON.parse(fila.datos) as Horario[];
+  }
+  const completa = TIPOS_DE_DIA.every((tipo) =>
+    filas.some((fila) => fila.tipo_de_dia === tipo),
+  );
+  return { completa, porTipo };
+}
+
 export async function leerFeriados(db: SQLiteDatabase): Promise<Feriado[]> {
   return db.getAllAsync<Feriado>('SELECT fecha, nombre FROM feriados ORDER BY fecha');
+}
+
+export async function persistirAvisos(db: SQLiteDatabase, avisos: Aviso[]): Promise<void> {
+  await db.withTransactionAsync(async () => {
+    for (const aviso of avisos) {
+      await db.runAsync('INSERT OR REPLACE INTO avisos (id, datos) VALUES (?, ?)', aviso.id, JSON.stringify(aviso));
+    }
+  });
+}
+
+export async function persistirAviso(db: SQLiteDatabase, aviso: Aviso): Promise<void> {
+  await db.runAsync('INSERT OR REPLACE INTO avisos (id, datos) VALUES (?, ?)', aviso.id, JSON.stringify(aviso));
+}
+
+export async function leerAvisos(db: SQLiteDatabase): Promise<Aviso[]> {
+  const filas = await db.getAllAsync<{ datos: string }>('SELECT datos FROM avisos ORDER BY id');
+  return filas.map((fila) => JSON.parse(fila.datos) as Aviso);
+}
+
+export async function leerAvisoPorId(db: SQLiteDatabase, id: string): Promise<Aviso | null> {
+  const fila = await db.getFirstAsync<{ datos: string }>('SELECT datos FROM avisos WHERE id = ?', id);
+  return fila ? (JSON.parse(fila.datos) as Aviso) : null;
+}
+
+export async function persistirVideoAviso(db: SQLiteDatabase, video: VideoAvisoGuardado): Promise<void> {
+  await db.runAsync(
+    'INSERT OR REPLACE INTO videos_aviso (aviso_id, video_url, archivo_uri, bytes) VALUES (?, ?, ?, ?)',
+    video.avisoId,
+    video.videoUrl,
+    video.archivoUri,
+    video.bytes,
+  );
+}
+
+export async function leerVideoAviso(db: SQLiteDatabase, avisoId: string): Promise<VideoAvisoGuardado | null> {
+  const fila = await db.getFirstAsync<{ aviso_id: string; video_url: string; archivo_uri: string; bytes: number }>(
+    'SELECT aviso_id, video_url, archivo_uri, bytes FROM videos_aviso WHERE aviso_id = ?',
+    avisoId,
+  );
+  if (!fila) return null;
+  return {
+    avisoId: fila.aviso_id,
+    videoUrl: fila.video_url,
+    archivoUri: fila.archivo_uri,
+    bytes: fila.bytes,
+  };
+}
+
+export async function leerVideosAviso(db: SQLiteDatabase): Promise<VideoAvisoGuardado[]> {
+  const filas = await db.getAllAsync<{ aviso_id: string; video_url: string; archivo_uri: string; bytes: number }>(
+    'SELECT aviso_id, video_url, archivo_uri, bytes FROM videos_aviso',
+  );
+  return filas.map((fila) => ({
+    avisoId: fila.aviso_id,
+    videoUrl: fila.video_url,
+    archivoUri: fila.archivo_uri,
+    bytes: fila.bytes,
+  }));
+}
+
+export async function borrarVideoAviso(db: SQLiteDatabase, avisoId: string): Promise<void> {
+  await db.runAsync('DELETE FROM videos_aviso WHERE aviso_id = ?', avisoId);
+}
+
+export async function persistirReportePendiente(db: SQLiteDatabase, item: ItemColaReporte): Promise<void> {
+  await db.runAsync(
+    'INSERT OR REPLACE INTO reportes_pendientes (id, usuario_id, datos) VALUES (?, ?, ?)',
+    item.id,
+    item.usuarioId,
+    JSON.stringify(item),
+  );
+}
+
+export async function leerReportesPendientes(db: SQLiteDatabase): Promise<ItemColaReporte[]> {
+  const filas = await db.getAllAsync<{ datos: string }>(
+    'SELECT datos FROM reportes_pendientes ORDER BY id',
+  );
+  return filas.map((fila) => JSON.parse(fila.datos) as ItemColaReporte);
+}
+
+export async function leerReportesPendientesDeUsuario(
+  db: SQLiteDatabase,
+  usuarioId: string,
+): Promise<ItemColaReporte[]> {
+  const filas = await db.getAllAsync<{ datos: string }>(
+    'SELECT datos FROM reportes_pendientes WHERE usuario_id = ? ORDER BY id',
+    usuarioId,
+  );
+  return filas.map((fila) => JSON.parse(fila.datos) as ItemColaReporte);
+}
+
+export async function borrarReportePendiente(db: SQLiteDatabase, id: string): Promise<void> {
+  await db.runAsync('DELETE FROM reportes_pendientes WHERE id = ?', id);
 }

@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { useSesion } from '@/contextos/sesion';
 import {
+  actualizarPerfil,
   agregarLineaFavorita,
   agregarParadaFavorita,
   obtenerUsuario,
@@ -80,11 +81,30 @@ export function useFavoritos() {
     onSettled: () => queryClient.invalidateQueries({ queryKey }),
   });
 
+  const mutacionAvisos = useMutation<void, RespuestaError, boolean, { previo: RespuestaUno<Usuario> | undefined }>({
+    mutationFn: async (avisosActivos) => {
+      await actualizarPerfil({ avisosActivos });
+    },
+    onMutate: async (avisosActivos) => {
+      await queryClient.cancelQueries({ queryKey });
+      const previo = queryClient.getQueryData<RespuestaUno<Usuario>>(queryKey);
+      queryClient.setQueryData<RespuestaUno<Usuario>>(queryKey, (actual) => actual && ({
+        ...actual,
+        datos: { ...actual.datos, avisosActivos },
+      }));
+      return { previo };
+    },
+    onError: (_error, _valor, contexto) => {
+      queryClient.setQueryData(queryKey, contexto?.previo);
+    },
+    onSettled: () => queryClient.invalidateQueries({ queryKey }),
+  });
+
   const usuario = consulta.data?.datos;
   return {
     ...consulta,
     usuario,
-    actualizando: mutacionLinea.isPending || mutacionParada.isPending,
+    actualizando: mutacionLinea.isPending || mutacionParada.isPending || mutacionAvisos.isPending,
     lineasFavoritas: usuario?.lineasFavoritas ?? [],
     paradasFavoritas: usuario?.paradasFavoritas ?? [],
     alternarLineaFavorita: (id: string) => mutacionLinea.mutate({
@@ -95,7 +115,9 @@ export function useFavoritos() {
       id,
       eraFavorito: usuario?.paradasFavoritas.includes(id) ?? false,
     }),
+    setAvisosActivos: (activo: boolean) => mutacionAvisos.mutate(activo),
     errorLinea: mutacionLinea.error,
     errorParada: mutacionParada.error,
+    errorAvisosActivos: mutacionAvisos.error,
   };
 }

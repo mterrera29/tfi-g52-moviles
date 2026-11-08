@@ -2,7 +2,7 @@ import type { SQLiteDatabase } from 'expo-sqlite';
 
 import { registrarConexion } from '@/db/conexion';
 
-const VERSION = 1;
+const VERSION = 3;
 
 export async function migrar(db: SQLiteDatabase): Promise<void> {
   registrarConexion(db);
@@ -33,6 +33,32 @@ export async function migrar(db: SQLiteDatabase): Promise<void> {
         nombre TEXT NOT NULL
       );`);
     actual = 1;
+  }
+
+  if (actual === 1) {
+    await db.execAsync(`
+      CREATE TABLE avisos (
+        id TEXT PRIMARY KEY NOT NULL,
+        datos TEXT NOT NULL
+      );
+      CREATE TABLE videos_aviso (
+        aviso_id TEXT PRIMARY KEY NOT NULL,
+        video_url TEXT NOT NULL,
+        archivo_uri TEXT NOT NULL,
+        bytes INTEGER NOT NULL
+      );`);
+    actual = 2;
+  }
+
+  if (actual === 2) {
+    await db.execAsync(`
+      CREATE TABLE reportes_pendientes (
+        id TEXT PRIMARY KEY NOT NULL,
+        usuario_id TEXT NOT NULL,
+        datos TEXT NOT NULL
+      );
+      CREATE INDEX idx_reportes_pendientes_usuario ON reportes_pendientes (usuario_id);`);
+    actual = 3;
   }
 
   await db.execAsync(`PRAGMA user_version = ${VERSION}`);

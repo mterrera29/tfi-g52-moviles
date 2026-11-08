@@ -21,3 +21,7 @@ export function guardarTexto(clave: string, valor: string): void {
 export function leerTexto(clave: string): string | null {
   return Storage.getItemSync(clave);
 }
+
+export function borrarClave(clave: string): void {
+  Storage.removeItemSync(clave);
+}
