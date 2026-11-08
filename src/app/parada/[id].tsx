@@ -96,6 +96,24 @@ export default function ParadaDetalleScreen() {
     );
   }
 
+  const botonComoLlegar = (
+    <Pressable
+      accessibilityRole='button'
+      accessibilityLabel='Cómo llegar a esta parada'
+      onPress={async () => {
+        try {
+          await Linking.openURL(`https://www.google.com/maps/search/?api=1&query=${parada.coordenadas.latitud},${parada.coordenadas.longitud}`);
+        } catch {
+          Alert.alert('No se pudo abrir el mapa', 'Intentá nuevamente para ver cómo llegar a la parada.');
+        }
+      }}
+      style={({ pressed }) => [{ flex: 1, minHeight: 48, flexDirection: 'row', gap: 8, justifyContent: 'center', alignItems: 'center', borderRadius: 8, padding: 12, backgroundColor: colores.acento, opacity: pressed ? 0.7 : 1 }]}
+    >
+      <Ionicons name='map-outline' size={22} color={colores.acentoTexto} />
+      <Text style={{ color: colores.acentoTexto, fontWeight: '600', fontSize: 15 }}>Cómo llegar</Text>
+    </Pressable>
+  );
+
   return (
     <SafeAreaView
       style={[estilos.contenedor, { backgroundColor: colores.fondo }]}
@@ -137,28 +155,16 @@ export default function ParadaDetalleScreen() {
           </Pressable>
         </View>
 
-        <Pressable
-          accessibilityRole='button'
-          accessibilityLabel='Cómo llegar a esta parada'
-          onPress={async () => {
-            try {
-              await Linking.openURL(`https://www.google.com/maps/search/?api=1&query=${parada.coordenadas.latitud},${parada.coordenadas.longitud}`);
-            } catch {
-              Alert.alert('No se pudo abrir el mapa', 'Intentá nuevamente para ver cómo llegar a la parada.');
-            }
-          }}
-          style={({ pressed }) => [{ minHeight: 48, justifyContent: 'center', alignItems: 'center', borderRadius: 8, padding: 12, backgroundColor: colores.acento, opacity: pressed ? 0.7 : 1 }]}
-        >
-          <Text style={{ color: colores.acentoTexto, fontWeight: '600', fontSize: 16 }}>Cómo llegar</Text>
-        </Pressable>
-
         {coordenadasValidas(parada.coordenadas) ? (
           <FlechaParada
             destino={parada.coordenadas}
             paradaId={parada.id}
             nombreParada={parada.nombre}
+            botonComoLlegar={botonComoLlegar}
           />
-        ) : null}
+        ) : (
+          <View style={{ flexDirection: 'row' }}>{botonComoLlegar}</View>
+        )}
 
         <ReportesParada paradaId={parada.id} lineas={lineas} />
 

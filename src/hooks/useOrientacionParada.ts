@@ -171,6 +171,7 @@ export function useOrientacionParada(destino: Coordenadas | null, paradaId: stri
     let ultimoFixVivoMs: number | null = null;
     let gpsOk = false;
     let magOk = false;
+    let lecturasMalas = 0;
     setCargando(true);
     setError(null);
 
@@ -330,6 +331,9 @@ export function useOrientacionParada(destino: Coordenadas | null, paradaId: stri
         const muestra: LecturaMagnetica = { x: lectura.x, y: lectura.y, z: lectura.z };
         const actualizado = actualizarFiltroMagnetico(filtroMag, muestra);
         if (actualizado.invalidarFlecha) {
+          // Una lectura mala suelta no apaga la flecha: esperamos varias seguidas.
+          lecturasMalas += 1;
+          if (lecturasMalas < 5) return;
           filtroMag = null;
           magOk = false;
           rumboTelRef.current = null;
@@ -342,6 +346,7 @@ export function useOrientacionParada(destino: Coordenadas | null, paradaId: stri
           }));
           return;
         }
+        lecturasMalas = 0;
         filtroMag = actualizado.suave;
         magOk = true;
         rumboTelRef.current = actualizado.rumbo;

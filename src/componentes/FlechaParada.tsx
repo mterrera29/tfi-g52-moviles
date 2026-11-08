@@ -1,4 +1,5 @@
 import Ionicons from '@react-native-vector-icons/ionicons';
+import type { ReactNode } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { EstadoError } from '@/componentes/EstadoError';
@@ -10,15 +11,16 @@ export function FlechaParada({
   destino,
   paradaId,
   nombreParada,
+  botonComoLlegar,
 }: {
   destino: Coordenadas;
   paradaId: string;
   nombreParada: string;
+  botonComoLlegar?: ReactNode;
 }) {
   const { colores } = useTema();
   const {
     activa,
-    cargando,
     error,
     rotacion,
     distancia,
@@ -28,6 +30,9 @@ export function FlechaParada({
     detener,
     reintentar,
   } = useOrientacionParada(destino, paradaId);
+
+  // El giro dura hasta que aparece la flecha, así no parpadea mientras llegan las señales.
+  const buscando = activa && !error && !enLaParada && rotacion === null;
 
   const metros =
     distancia !== null && Number.isFinite(distancia)
@@ -39,48 +44,36 @@ export function FlechaParada({
   return (
     <View style={estilos.caja}>
       <Text style={[estilos.titulo, { color: colores.texto }]}>Hacia la parada</Text>
+      <View style={estilos.filaBotones}>
+        {botonComoLlegar}
+        <Pressable
+          accessibilityRole='button'
+          accessibilityLabel={activa ? 'Dejar de orientar' : 'Orientarme a la parada'}
+          accessibilityHint='Pide ubicación y usa la brújula del teléfono para apuntar hacia la parada'
+          onPress={() => (activa ? detener() : orientar())}
+          style={({ pressed }) => [
+            estilos.boton,
+            {
+              backgroundColor: colores.fondoSecundario,
+              borderColor: colores.acento,
+              opacity: pressed ? 0.7 : 1,
+            },
+          ]}
+        >
+          <Ionicons name='compass-outline' size={22} color={colores.acento} />
+          <Text style={[estilos.textoBoton, { color: colores.acento }]}>
+            {activa ? 'Dejar de orientar' : 'Orientarme'}
+          </Text>
+        </Pressable>
+      </View>
+
       <Text style={[estilos.aclaracion, { color: colores.textoSecundario }]}>
         Flecha en línea recta, orientativa. No es una ruta por las calles ni un GPS giro a giro. El
         rumbo es magnético estimado, no un norte geográfico exacto. Conviene tener el teléfono más o
         menos horizontal: no medimos la inclinación con acelerómetro.
       </Text>
 
-      {!activa ? (
-        <Pressable
-          accessibilityRole='button'
-          accessibilityLabel='Orientarme a la parada'
-          accessibilityHint='Pide ubicación y usa la brújula del teléfono para apuntar hacia la parada'
-          onPress={() => orientar()}
-          style={({ pressed }) => [
-            estilos.boton,
-            {
-              backgroundColor: colores.fondoSecundario,
-              borderColor: colores.borde,
-              opacity: pressed ? 0.7 : 1,
-            },
-          ]}
-        >
-          <Text style={[estilos.textoBoton, { color: colores.acento }]}>Orientarme a la parada</Text>
-        </Pressable>
-      ) : (
-        <Pressable
-          accessibilityRole='button'
-          accessibilityLabel='Dejar de orientar'
-          onPress={() => detener()}
-          style={({ pressed }) => [
-            estilos.boton,
-            {
-              backgroundColor: colores.fondoSecundario,
-              borderColor: colores.borde,
-              opacity: pressed ? 0.7 : 1,
-            },
-          ]}
-        >
-          <Text style={[estilos.textoBoton, { color: colores.acento }]}>Dejar de orientar</Text>
-        </Pressable>
-      )}
-
-      {cargando ? (
+      {buscando ? (
         <View style={estilos.filaEstado} accessibilityLiveRegion='polite'>
           <ActivityIndicator color={colores.acento} accessibilityLabel='Orientando hacia la parada' />
           <Text style={{ color: colores.textoSecundario }}>Buscando posición y brújula…</Text>
@@ -151,17 +144,24 @@ const estilos = StyleSheet.create({
   aclaracion: {
     fontSize: 13,
   },
+  filaBotones: {
+    flexDirection: 'row',
+    gap: 8,
+  },
   boton: {
+    flex: 1,
     minHeight: 48,
+    flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
+    gap: 8,
     borderRadius: 8,
     padding: 12,
-    borderWidth: StyleSheet.hairlineWidth,
+    borderWidth: 1,
   },
   textoBoton: {
     fontWeight: '600',
-    fontSize: 16,
+    fontSize: 15,
   },
   filaEstado: {
     flexDirection: 'row',
