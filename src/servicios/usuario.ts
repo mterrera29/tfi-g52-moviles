@@ -29,3 +29,12 @@ export async function agregarParadaFavorita(paradaId: string): Promise<Respuesta
 export async function quitarParadaFavorita(paradaId: string): Promise<void> {
   await cliente.delete(`/yo/paradas-favoritas/${encodeURIComponent(paradaId)}`);
 }
+
+export async function actualizarPerfil(datos: {
+  avisosActivos?: boolean;
+  tema?: Usuario['tema'];
+  nombre?: string;
+}): Promise<RespuestaUno<Usuario>> {
+  const respuesta = await cliente.patch<RespuestaUno<Usuario>>('/yo', datos);
+  return respuesta.data;
+}

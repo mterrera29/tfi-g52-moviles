@@ -1,6 +1,5 @@
-import { Mapa } from '@/componentes/Mapa';
 import Ionicons from '@react-native-vector-icons/ionicons';
-import { router, Stack, useLocalSearchParams } from 'expo-router';
+import { Link, router, Stack, useLocalSearchParams } from 'expo-router';
 import { useQuery } from '@tanstack/react-query';
 import {
   ActivityIndicator,
@@ -15,10 +14,13 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useSesion } from '@/contextos/sesion';
 import { useFavoritos } from '@/hooks/useFavoritos';
 import { useTema } from '@/contextos/tema';
-import { obtenerAvisosPorLinea } from '@/servicios/avisos';
-import { obtenerLineaPorId } from '@/servicios/lineas';
-import { obtenerParadasPorIds } from '@/servicios/paradas';
+import { consultarLineaDetalle } from '@/servicios/consulta';
+import { BadgeLinea } from '@/componentes/BadgeLinea';
+import { CartelParada } from '@/componentes/CartelParada';
 import { EstadoError } from '@/componentes/EstadoError';
+import { HorariosLinea } from '@/componentes/HorariosLinea';
+import { MapaRecorridoLinea } from '@/componentes/MapaRecorridoLinea';
+import { filtrarTrazadosAlternativos } from '@/lib/trazadoAlternativo';
 import type { RespuestaError } from '@/tipos/api';
 
 export default function LineaDetalleScreen() {
@@ -32,21 +34,14 @@ export default function LineaDetalleScreen() {
     queryKey: ['linea', lineaId],
     queryFn: async () => {
       if (!lineaId) throw { error: { codigo: 'VALIDACION_FALLIDA', mensaje: 'No se indicó qué línea abrir.' } };
-      const { datos: linea } = await obtenerLineaPorId(lineaId);
-      const [recorridos, respuestaAvisos] = await Promise.all([
-        Promise.all(linea.recorridos.map(async (recorrido) => ({
-          ...recorrido,
-          paradas: (await obtenerParadasPorIds(recorrido.paradaIds)).datos,
-        }))),
-        obtenerAvisosPorLinea(lineaId),
-      ]);
-      return { linea, recorridos, avisos: respuestaAvisos.datos };
+      return consultarLineaDetalle(lineaId);
     },
   });
   const esFavorita = !!sesion && lineasFavoritas.includes(lineaId);
   const linea = data?.linea;
   const recorridos = data?.recorridos ?? [];
   const avisos = data?.avisos ?? [];
+  const trazadosAlternativos = filtrarTrazadosAlternativos(avisos);
 
   if (isPending) {
     return (
@@ -87,6 +82,7 @@ export default function LineaDetalleScreen() {
                 router.push({
                   pathname: '/acerca',
                   params: {
+                    lineaId: linea.id,
                     lineaNumero: linea.numero,
                     lineaNombre: linea.nombre,
                     empresa: linea.empresa,
@@ -109,22 +105,6 @@ export default function LineaDetalleScreen() {
       />
 
       <ScrollView contentContainerStyle={estilos.scroll}>
-        <Pressable
-          accessibilityRole='button'
-          accessibilityLabel={esFavorita ? 'Quitar de favoritos' : 'Agregar a favoritos'}
-          accessibilityState={{ selected: esFavorita, disabled: !!sesion && (!usuario || actualizando) }}
-          disabled={!!sesion && (!usuario || actualizando)}
-          onPress={() => {
-            if (!sesion) {
-              router.push('/login');
-              return;
-            }
-            alternarLineaFavorita(linea.id);
-          }}
-          style={{ alignSelf: 'flex-end', padding: 8 }}
-        >
-          <Ionicons name={esFavorita ? 'heart' : 'heart-outline'} size={28} color={colores.acento} />
-        </Pressable>
         {errorLinea && (
           <Text accessibilityLiveRegion='polite' style={{ color: colores.error }}>
             {errorLinea.error.mensaje}
@@ -136,13 +116,7 @@ export default function LineaDetalleScreen() {
           accessibilityLabel={`Línea ${linea.numero}, ${linea.nombre}. Empresa ${linea.empresa}`}
           style={estilos.encabezado}
         >
-          <View
-            style={[estilos.badge, { backgroundColor: linea.color }]}
-            importantForAccessibility='no-hide-descendants'
-            accessibilityElementsHidden
-          >
-            <Text style={estilos.numero}>{linea.numero}</Text>
-          </View>
+          <BadgeLinea numero={linea.numero} color={linea.color} tamano='grande' />
           <View style={estilos.encabezadoTexto}>
             <Text style={[estilos.nombre, { color: colores.texto }]}>
               {linea.nombre}
@@ -151,6 +125,22 @@ export default function LineaDetalleScreen() {
               {linea.empresa}
             </Text>
           </View>
+            <Pressable
+              accessibilityRole='button'
+              accessibilityLabel={esFavorita ? 'Quitar de favoritos' : 'Agregar a favoritos'}
+              accessibilityState={{ selected: esFavorita, disabled: !!sesion && (!usuario || actualizando) }}
+              disabled={!!sesion && (!usuario || actualizando)}
+              onPress={() => {
+                if (!sesion) {
+                  router.push('/login');
+                  return;
+                }
+                alternarLineaFavorita(linea.id);
+              }}
+              style={{ padding: 8 }}
+            >
+              <Ionicons name={esFavorita ? 'heart' : 'heart-outline'} size={28} color={colores.acento} />
+            </Pressable>
         </View>
 
         {!linea.activa && (
@@ -190,17 +180,49 @@ export default function LineaDetalleScreen() {
             >
               {aviso.detalle}
             </Text>
+            {trazadosAlternativos.some((trazado) => trazado.id === aviso.id) ? (
+              <Text style={[estilos.alertaDetalle, { color: colores.texto }]}>
+                El trazado alternativo de este desvío está dibujado en el mapa.
+              </Text>
+            ) : null}
+            {aviso.videoUrl ? (
+              <Link href={{ pathname: '/aviso/[id]', params: { id: aviso.id } }} asChild>
+                <Pressable
+                  accessibilityRole='button'
+                  accessibilityLabel='Ver video del aviso'
+                  style={{ minHeight: 44, justifyContent: 'center' }}
+                >
+                  <Text style={{ color: colores.texto, fontWeight: '600' }}>Ver video</Text>
+                </Pressable>
+              </Link>
+            ) : null}
           </View>
         ))}
 
-        <View style={{ height: 260 }}>
-          <Mapa recorridos={linea.recorridos} paradas={recorridos.flatMap((recorrido) => recorrido.paradas)} color={linea.color} descripcion={`Mapa de los recorridos de la línea ${linea.numero}. Ida con línea continua y vuelta con línea discontinua.`} />
-        </View>
+        <MapaRecorridoLinea
+          numeroLinea={linea.numero}
+          colorLinea={linea.color}
+          recorridos={linea.recorridos}
+          paradas={recorridos.flatMap((recorrido) => recorrido.paradas)}
+          trazadosAlternativos={trazadosAlternativos}
+          compacto
+          onPantallaCompleta={() =>
+            router.push({ pathname: '/linea/[id]/mapa', params: { id: linea.id } })
+          }
+        />
         {linea.recorridos.map((recorrido) => (
           <Text key={recorrido.sentido} style={{ color: colores.texto }}>
-            {recorrido.sentido === 'ida' ? 'Ida (línea continua)' : 'Vuelta (línea discontinua)'} — {recorrido.destino}
+            {recorrido.sentido === 'ida' ? 'Ida (azul, continua)' : 'Vuelta (magenta, discontinua)'} — {recorrido.destino}
           </Text>
         ))}
+        {trazadosAlternativos.length > 0 ? (
+          <Text
+            style={{ color: colores.texto }}
+            accessibilityLiveRegion='polite'
+          >
+            Desvío vigente (línea naranja punteada): trazado publicado en el aviso, no es el recorrido habitual ni una ruta calculada.
+          </Text>
+        ) : null}
 
         {recorridos.map((recorrido) => (
           <View key={recorrido.sentido} style={estilos.seccion}>
@@ -235,26 +257,35 @@ export default function LineaDetalleScreen() {
                   <Text style={[estilos.orden, { color: colores.acento }]}>
                     {indice + 1}
                   </Text>
+                  <CartelParada tamano={36} />
                   <View style={estilos.paradaInfo}>
                     <Text style={[estilos.paradaNombre, { color: colores.texto }]}>
                       {parada.nombre}
                     </Text>
-                    {parada.refugio && (
-                      <Text
-                        style={[
-                          estilos.paradaDetalle,
-                          { color: colores.textoSecundario },
-                        ]}
-                      >
-                        Con refugio
-                      </Text>
-                    )}
                   </View>
+                  {parada.refugio && (
+                    <Ionicons
+                      name='umbrella-outline'
+                      size={22}
+                      color={colores.textoSecundario}
+                      accessible={false}
+                    />
+                  )}
                 </Pressable>
               ))
             )}
           </View>
         ))}
+        {recorridos.length > 0 && (
+        <HorariosLinea
+          lineaId={linea.id}
+          sentidos={recorridos.map((recorrido) => ({
+            sentido: recorrido.sentido,
+            destino: recorrido.destino,
+            paradaId: recorrido.paradas[0]?.id ?? null,
+          }))}
+        />
+        )}
       </ScrollView>
     </SafeAreaView>
   );
@@ -283,18 +314,6 @@ const estilos = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
-  },
-  badge: {
-    width: 52,
-    height: 52,
-    borderRadius: 26,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  numero: {
-    color: '#fff',
-    fontSize: 20,
-    fontWeight: '700',
   },
   encabezadoTexto: {
     flex: 1,
@@ -332,9 +351,9 @@ const estilos = StyleSheet.create({
   },
   filaParada: {
     flexDirection: 'row',
-    alignItems: 'flex-start',
+    alignItems: 'center',
     gap: 12,
-    paddingVertical: 10,
+    paddingVertical: 8,
     borderBottomWidth: StyleSheet.hairlineWidth,
   },
   orden: {
@@ -347,9 +366,6 @@ const estilos = StyleSheet.create({
   },
   paradaNombre: {
     fontSize: 16,
-  },
-  paradaDetalle: {
-    fontSize: 13,
   },
   mensaje: {
     fontSize: 15,

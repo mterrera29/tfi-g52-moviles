@@ -16,6 +16,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { useSesion } from '@/contextos/sesion';
 import { useTema } from '@/contextos/tema';
+import { EstadoError } from '@/componentes/EstadoError';
 import { esquemaRegistro, type DatosRegistro } from '@/esquemas/auth';
 
 export default function RegistroScreen() {
@@ -53,6 +54,19 @@ export default function RegistroScreen() {
 
     router.replace('/lineas');
   };
+
+  if (enviando) {
+    return (
+      <SafeAreaView
+        style={[estilos.contenedor, estilos.centrado, { backgroundColor: colores.fondo }]}
+        edges={['bottom']}
+      >
+        <Stack.Screen options={{ title: 'Crear cuenta' }} />
+        <ActivityIndicator size='large' color={colores.acento} accessibilityLabel='Creando cuenta' />
+        <Text style={{ color: colores.textoSecundario }}>Creando cuenta...</Text>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView
@@ -172,12 +186,12 @@ export default function RegistroScreen() {
           )}
 
           {errorServicio && (
-            <Text
-              style={[estilos.errorServicio, { color: colores.error }]}
-              accessibilityRole='alert'
-            >
-              {errorServicio}
-            </Text>
+            <EstadoError
+              mensaje={errorServicio}
+              onReintentar={() => {
+                void handleSubmit(enviar)();
+              }}
+            />
           )}
 
           <Pressable
@@ -193,13 +207,9 @@ export default function RegistroScreen() {
               },
             ]}
           >
-            {enviando ? (
-              <ActivityIndicator color={colores.acentoTexto} />
-            ) : (
-              <Text style={[estilos.botonTexto, { color: colores.acentoTexto }]}>
-                Crear cuenta
-              </Text>
-            )}
+            <Text style={[estilos.botonTexto, { color: colores.acentoTexto }]}>
+              Crear cuenta
+            </Text>
           </Pressable>
 
           <Link href='/login' asChild>
@@ -221,6 +231,13 @@ export default function RegistroScreen() {
 const estilos = StyleSheet.create({
   contenedor: {
     flex: 1,
+  },
+  centrado: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 12,
+    padding: 24,
   },
   formulario: {
     flex: 1,

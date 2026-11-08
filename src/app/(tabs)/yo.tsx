@@ -1,5 +1,6 @@
 import { Link, router } from 'expo-router';
 import { useQuery } from '@tanstack/react-query';
+import { useState } from 'react';
 import {
   ActivityIndicator,
   Pressable,
@@ -12,11 +13,15 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { useSesion } from '@/contextos/sesion';
 import { useTema } from '@/contextos/tema';
+import { BadgeLinea } from '@/componentes/BadgeLinea';
+import { CartelParada } from '@/componentes/CartelParada';
 import { EstadoError } from '@/componentes/EstadoError';
+import { EstadoVacio } from '@/componentes/EstadoVacio';
+import { useCambioTema } from '@/hooks/useCambioTema';
 import { useFavoritos } from '@/hooks/useFavoritos';
 import type { RespuestaError } from '@/tipos/api';
-import { obtenerLineas } from '@/servicios/lineas';
-import { obtenerParadas } from '@/servicios/paradas';
+import { consultarLineas, consultarParadas } from '@/servicios/consulta';
+import { pedirPermisoNotificaciones, resembrarAvisosVistos } from '@/servicios/notificaciones';
 import type { Tema } from '@/tipos/usuario';
 
 function OpcionTema({
@@ -61,18 +66,20 @@ function OpcionTema({
 }
 
 export default function YoScreen() {
-  const { colores, preferencia, setPreferencia } = useTema();
+  const { colores } = useTema();
+  const { preferencia, elegirTema, errorTema } = useCambioTema();
   const { sesion, errorCierre, cerrarSesion } = useSesion();
   const consultaUsuario = useFavoritos();
   const usuario = consultaUsuario.usuario;
-  const consultaLineas = useQuery<Awaited<ReturnType<typeof obtenerLineas>>, RespuestaError>({
+  const [errorPermisoAvisos, setErrorPermisoAvisos] = useState<string | null>(null);
+  const consultaLineas = useQuery<Awaited<ReturnType<typeof consultarLineas>>, RespuestaError>({
     queryKey: ['lineas'],
-    queryFn: () => obtenerLineas(),
+    queryFn: () => consultarLineas(),
     enabled: !!sesion,
   });
-  const consultaParadas = useQuery<Awaited<ReturnType<typeof obtenerParadas>>, RespuestaError>({
+  const consultaParadas = useQuery<Awaited<ReturnType<typeof consultarParadas>>, RespuestaError>({
     queryKey: ['paradas'],
-    queryFn: () => obtenerParadas(),
+    queryFn: () => consultarParadas(),
     enabled: !!sesion,
   });
   const lineasFavoritas = (consultaLineas.data?.datos ?? []).filter((linea) =>
@@ -133,25 +140,25 @@ export default function YoScreen() {
                 etiqueta='Claro'
                 valor='claro'
                 seleccionado={preferencia === 'claro'}
-                onSeleccionar={setPreferencia}
+                onSeleccionar={elegirTema}
               />
               <OpcionTema
                 etiqueta='Oscuro'
                 valor='oscuro'
                 seleccionado={preferencia === 'oscuro'}
-                onSeleccionar={setPreferencia}
+                onSeleccionar={elegirTema}
               />
               <OpcionTema
                 etiqueta='Sistema'
                 valor='sistema'
                 seleccionado={preferencia === 'sistema'}
-                onSeleccionar={setPreferencia}
+                onSeleccionar={elegirTema}
               />
             </View>
 
-            <Link href='/login' asChild>
-              <Pressable
+            <Pressable
                 accessibilityRole='button'
+                onPress={() => router.push('/login')}
                 accessibilityLabel='Iniciar sesión'
                 style={({ pressed }) => [
                   estilos.botonPrimario,
@@ -170,7 +177,6 @@ export default function YoScreen() {
                   Iniciar sesión
                 </Text>
               </Pressable>
-            </Link>
 
             <Link href='/registro' asChild>
               <Pressable
@@ -240,9 +246,64 @@ export default function YoScreen() {
           <Text style={[estilos.email, { color: colores.textoSecundario }]}>
             {usuario.email}
           </Text>
-          <Text style={[estilos.detalle, { color: colores.textoSecundario }]}>
-            Avisos activos: {usuario.avisosActivos ? 'Sí' : 'No'}
+          <Text style={[estilos.seccionChica, { color: colores.texto }]}>
+            Avisos de líneas favoritas
           </Text>
+          <Text style={[estilos.detalle, { color: colores.textoSecundario }]}>
+            Te avisamos en este teléfono cuando aparece un aviso nuevo de una línea
+            favorita. No es GPS ni un push del servidor: la API no manda
+            notificaciones remotas.
+          </Text>
+          <Pressable
+            accessibilityRole='button'
+            accessibilityLabel={usuario.avisosActivos ? 'Desactivar avisos de favoritos' : 'Activar avisos de favoritos'}
+            accessibilityState={{ disabled: consultaUsuario.actualizando }}
+            disabled={consultaUsuario.actualizando}
+            onPress={() => {
+              void (async () => {
+                setErrorPermisoAvisos(null);
+                if (usuario.avisosActivos) {
+                  consultaUsuario.setAvisosActivos(false);
+                  return;
+                }
+                const ok = await pedirPermisoNotificaciones();
+                if (!ok) {
+                  setErrorPermisoAvisos(
+                    'Sin permiso de notificaciones no te podemos avisar. Podés activarlo después desde Ajustes.',
+                  );
+                  return;
+                }
+                resembrarAvisosVistos();
+                consultaUsuario.setAvisosActivos(true);
+              })();
+            }}
+            style={({ pressed }) => [
+              estilos.botonSecundario,
+              {
+                backgroundColor: usuario.avisosActivos ? colores.acento : colores.borde,
+                opacity: pressed ? 0.85 : 1,
+              },
+            ]}
+          >
+            <Text
+              style={[
+                estilos.botonSecundarioTexto,
+                { color: usuario.avisosActivos ? colores.acentoTexto : colores.texto },
+              ]}
+            >
+              {usuario.avisosActivos ? 'Avisos activos: sí' : 'Activar avisos'}
+            </Text>
+          </Pressable>
+          {errorPermisoAvisos ? (
+            <Text accessibilityRole='alert' style={[estilos.detalle, { color: colores.error }]}>
+              {errorPermisoAvisos}
+            </Text>
+          ) : null}
+          {consultaUsuario.errorAvisosActivos ? (
+            <Text accessibilityRole='alert' style={[estilos.detalle, { color: colores.error }]}>
+              {consultaUsuario.errorAvisosActivos.error.mensaje}
+            </Text>
+          ) : null}
 
           <Text style={[estilos.seccionChica, { color: colores.texto }]}>
             Apariencia
@@ -252,21 +313,26 @@ export default function YoScreen() {
               etiqueta='Claro'
               valor='claro'
               seleccionado={preferencia === 'claro'}
-              onSeleccionar={setPreferencia}
+              onSeleccionar={elegirTema}
             />
             <OpcionTema
               etiqueta='Oscuro'
               valor='oscuro'
               seleccionado={preferencia === 'oscuro'}
-              onSeleccionar={setPreferencia}
+              onSeleccionar={elegirTema}
             />
             <OpcionTema
               etiqueta='Sistema'
               valor='sistema'
               seleccionado={preferencia === 'sistema'}
-              onSeleccionar={setPreferencia}
+              onSeleccionar={elegirTema}
             />
           </View>
+          {errorTema ? (
+            <Text accessibilityRole='alert' style={[estilos.detalle, { color: colores.error }]}>
+              {errorTema.error.mensaje}
+            </Text>
+          ) : null}
 
           <Pressable
             onPress={() => cerrarSesion()}
@@ -296,9 +362,7 @@ export default function YoScreen() {
         </Text>
 
         {lineasFavoritas.length === 0 ? (
-          <Text style={[estilos.mensaje, { color: colores.textoSecundario }]}>
-            No tenés líneas favoritas.
-          </Text>
+          <EstadoVacio mensaje='No tenés líneas favoritas todavía.' />
         ) : (
           lineasFavoritas.map((linea) => (
             <Pressable
@@ -315,9 +379,7 @@ export default function YoScreen() {
                 pressed && { backgroundColor: colores.fondoSecundario },
               ]}
             >
-              <View style={[estilos.badge, { backgroundColor: linea.color }]}>
-                <Text style={estilos.badgeNumero}>{linea.numero}</Text>
-              </View>
+              <BadgeLinea numero={linea.numero} color={linea.color} tamano='medio' />
               <View style={estilos.filaTexto}>
                 <Text style={[estilos.filaTitulo, { color: colores.texto }]}>
                   {linea.nombre}
@@ -340,9 +402,7 @@ export default function YoScreen() {
         </Text>
 
         {paradasFavoritas.length === 0 ? (
-          <Text style={[estilos.mensaje, { color: colores.textoSecundario }]}>
-            No tenés paradas favoritas.
-          </Text>
+          <EstadoVacio mensaje='No tenés paradas favoritas todavía.' />
         ) : (
           paradasFavoritas.map((parada) => (
             <Pressable
@@ -359,11 +419,7 @@ export default function YoScreen() {
                 pressed && { backgroundColor: colores.fondoSecundario },
               ]}
             >
-              <View
-                style={[estilos.iconoParada, { backgroundColor: colores.acento }]}
-              >
-                <Text style={estilos.iconoParadaTexto}>P</Text>
-              </View>
+              <CartelParada />
               <View style={estilos.filaTexto}>
                 <Text style={[estilos.filaTitulo, { color: colores.texto }]}>
                   {parada.nombre}
@@ -481,28 +537,6 @@ const estilos = StyleSheet.create({
   },
   filaDetalle: {
     fontSize: 14,
-  },
-  badge: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  badgeNumero: {
-    color: '#fff',
-    fontWeight: '700',
-  },
-  iconoParada: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  iconoParadaTexto: {
-    color: '#fff',
-    fontWeight: '700',
   },
   mensaje: {
     fontSize: 15,

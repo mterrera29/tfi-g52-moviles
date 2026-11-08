@@ -8,6 +8,7 @@ export default function TabsLayout() {
 
   return (
     <Tabs
+      initialRouteName='index'
       screenOptions={{
         headerStyle: { backgroundColor: colores.headerFondo },
         headerTintColor: colores.headerTexto,
@@ -21,6 +22,16 @@ export default function TabsLayout() {
         sceneStyle: { backgroundColor: colores.fondo },
       }}
     >
+      <Tabs.Screen
+        name='index'
+        options={{
+          title: 'Inicio',
+          tabBarAccessibilityLabel: 'Inicio',
+          tabBarIcon: ({ color, size, focused }) => (
+            <Ionicons name={focused ? 'home' : 'home-outline'} size={size} color={color} />
+          ),
+        }}
+      />
       <Tabs.Screen
         name='lineas'
         options={{
@@ -55,6 +66,7 @@ export default function TabsLayout() {
         name='avisos'
         options={{
           title: 'Avisos',
+          href: null,
           tabBarAccessibilityLabel: 'Avisos',
           tabBarIcon: ({ color, size }) => (
             <Ionicons name='notifications' size={size} color={color} />

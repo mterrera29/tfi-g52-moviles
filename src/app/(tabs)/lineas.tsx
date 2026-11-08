@@ -10,19 +10,27 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { FilaLinea } from '@/componentes/FilaLinea';
 import { useTema } from '@/contextos/tema';
 import { useColumnasLista } from '@/hooks/useColumnasLista';
-import { obtenerLineas } from '@/servicios/lineas';
+import { consultarAvisos, consultarLineas } from '@/servicios/consulta';
 import type { RespuestaError } from '@/tipos/api';
 import { EstadoError } from '@/componentes/EstadoError';
+import { EstadoVacio } from '@/componentes/EstadoVacio';
+import { estadosDeLineas } from '@/lib/estadoLinea';
 
 export default function LineasScreen() {
   const { colores } = useTema();
   const { columnas, onLayout } = useColumnasLista();
   // La clave identifica la copia en caché (U05.T01 diap. 18).
-  const { data, isPending, error, refetch } = useQuery<Awaited<ReturnType<typeof obtenerLineas>>, RespuestaError>({
+  const { data, isPending, error, refetch } = useQuery<Awaited<ReturnType<typeof consultarLineas>>, RespuestaError>({
     queryKey: ['lineas'],
-    queryFn: obtenerLineas,
+    queryFn: consultarLineas,
+  });
+  // Misma consulta que usa Inicio: comparten la copia en caché.
+  const { data: avisos } = useQuery({
+    queryKey: ['avisos', 'vigentes'],
+    queryFn: consultarAvisos,
   });
   const lineas = data?.datos ?? [];
+  const estadoPorLinea = estadosDeLineas(avisos?.datos ?? []);
   const esGrilla = columnas > 1;
 
   if (isPending) {
@@ -70,12 +78,10 @@ export default function LineasScreen() {
         keyExtractor={(item) => item.id}
         contentContainerStyle={esGrilla ? estilos.contenidoGrilla : undefined}
         renderItem={({ item }) => (
-          <FilaLinea linea={item} esGrilla={esGrilla} colores={colores} />
+          <FilaLinea linea={item} esGrilla={esGrilla} colores={colores} estado={estadoPorLinea[item.id] ?? null} />
         )}
         ListEmptyComponent={
-          <Text style={{ color: colores.textoSecundario, padding: 16 }}>
-            No hay líneas.
-          </Text>
+          <EstadoVacio mensaje='No hay líneas disponibles.' />
         }
       />
     </SafeAreaView>

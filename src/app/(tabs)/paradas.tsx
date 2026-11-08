@@ -15,19 +15,21 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { CartelParada } from '@/componentes/CartelParada';
 import { useTema } from '@/contextos/tema';
 import { useColumnasLista } from '@/hooks/useColumnasLista';
-import { obtenerParadas } from '@/servicios/paradas';
+import { consultarParadas } from '@/servicios/consulta';
 import type { RespuestaError } from '@/tipos/api';
 import { EstadoError } from '@/componentes/EstadoError';
+import { EstadoVacio } from '@/componentes/EstadoVacio';
 
 export default function ParadasScreen() {
   const { colores } = useTema();
   const { columnas, onLayout } = useColumnasLista();
   const [busqueda, setBusqueda] = useState('');
-  const { data, isPending, error, refetch, isRefetching } = useQuery<Awaited<ReturnType<typeof obtenerParadas>>, RespuestaError>({
+  const { data, isPending, error, refetch, isRefetching } = useQuery<Awaited<ReturnType<typeof consultarParadas>>, RespuestaError>({
     queryKey: ['paradas'],
-    queryFn: () => obtenerParadas(),
+    queryFn: () => consultarParadas(),
   });
   const paradas = data?.datos ?? [];
   const esGrilla = columnas > 1;
@@ -160,21 +162,26 @@ export default function ParadasScreen() {
               pressed && { backgroundColor: colores.fondoSecundario },
             ]}
           >
-            <Text style={[estilos.nombre, { color: colores.texto }]}>
-              {item.nombre}
-            </Text>
-            <Text style={[estilos.detalle, { color: colores.textoSecundario }]}>
-              {item.refugio ? 'Con refugio' : 'Sin refugio'} · Sentido{' '}
-              {item.sentido}
-            </Text>
+            <CartelParada />
+            <View style={estilos.textoParada}>
+              <Text style={[estilos.nombre, { color: colores.texto }]}>
+                {item.nombre}
+              </Text>
+              <Text style={[estilos.detalle, { color: colores.textoSecundario }]}>
+                {item.refugio ? 'Con refugio' : 'Sin refugio'} · Sentido{' '}
+                {item.sentido}
+              </Text>
+            </View>
           </Pressable>
         )}
         ListEmptyComponent={
-          <View style={estilos.listaVacia}>
-            <Text style={[estilos.mensaje, { color: colores.textoSecundario }]}>
-              No se encontraron paradas.
-            </Text>
-          </View>
+          <EstadoVacio
+            mensaje={
+              paradas.length === 0
+                ? 'No hay paradas disponibles.'
+                : 'No se encontraron paradas con ese nombre o calle.'
+            }
+          />
         }
       />
       </KeyboardAvoidingView>
@@ -236,10 +243,14 @@ const estilos = StyleSheet.create({
     gap: 8,
   },
   fila: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
     paddingHorizontal: 16,
     paddingVertical: 14,
     borderBottomWidth: StyleSheet.hairlineWidth,
   },
+  textoParada: { flex: 1 },
   celdaGrilla: {
     flex: 1,
     borderBottomWidth: 0,

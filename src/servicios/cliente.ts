@@ -53,6 +53,8 @@ export function normalizarError(error: unknown): RespuestaError {
   }
 
   // Una respuesta inesperada también mantiene el mismo sobre de error.
+  // Se deja el error original en la consola de Metro para poder encontrar la causa real.
+  console.warn('[api] error inesperado:', error);
   return {
     error: {
       codigo: 'ERROR_INTERNO',
