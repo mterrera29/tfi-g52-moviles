@@ -224,17 +224,6 @@ export default function LineaDetalleScreen() {
           </Text>
         ) : null}
 
-        {recorridos.length > 0 && (
-        <HorariosLinea
-          lineaId={linea.id}
-          sentidos={recorridos.map((recorrido) => ({
-            sentido: recorrido.sentido,
-            destino: recorrido.destino,
-            paradaId: recorrido.paradas[0]?.id ?? null,
-          }))}
-        />
-        )}
-
         {recorridos.map((recorrido) => (
           <View key={recorrido.sentido} style={estilos.seccion}>
             <Text style={[estilos.seccionTitulo, { color: colores.acento }]}>
@@ -287,6 +276,16 @@ export default function LineaDetalleScreen() {
             )}
           </View>
         ))}
+        {recorridos.length > 0 && (
+        <HorariosLinea
+          lineaId={linea.id}
+          sentidos={recorridos.map((recorrido) => ({
+            sentido: recorrido.sentido,
+            destino: recorrido.destino,
+            paradaId: recorrido.paradas[0]?.id ?? null,
+          }))}
+        />
+        )}
       </ScrollView>
     </SafeAreaView>
   );
