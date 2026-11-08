@@ -18,6 +18,7 @@ import { consultarLineaDetalle } from '@/servicios/consulta';
 import { BadgeLinea } from '@/componentes/BadgeLinea';
 import { CartelParada } from '@/componentes/CartelParada';
 import { EstadoError } from '@/componentes/EstadoError';
+import { HorariosLinea } from '@/componentes/HorariosLinea';
 import { MapaRecorridoLinea } from '@/componentes/MapaRecorridoLinea';
 import { filtrarTrazadosAlternativos } from '@/lib/trazadoAlternativo';
 import type { RespuestaError } from '@/tipos/api';
@@ -222,6 +223,17 @@ export default function LineaDetalleScreen() {
             Desvío vigente (línea naranja punteada): trazado publicado en el aviso, no es el recorrido habitual ni una ruta calculada.
           </Text>
         ) : null}
+
+        {recorridos.length > 0 && (
+        <HorariosLinea
+          lineaId={linea.id}
+          sentidos={recorridos.map((recorrido) => ({
+            sentido: recorrido.sentido,
+            destino: recorrido.destino,
+            paradaId: recorrido.paradas[0]?.id ?? null,
+          }))}
+        />
+        )}
 
         {recorridos.map((recorrido) => (
           <View key={recorrido.sentido} style={estilos.seccion}>

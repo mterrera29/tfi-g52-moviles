@@ -420,3 +420,30 @@ export async function consultarHorariosLineaHoy(
   }
   return porSentido.length ? { tipoDeDia, porSentido } : null;
 }
+
+/**
+ * Horas de una línea para un tipo de día, tomadas de la primera parada del sentido.
+ * Con conexión se piden a la API; sin conexión se usan las tablas guardadas en SQLite.
+ */
+export async function consultarHorasLinea(
+  lineaId: string,
+  paradaId: string,
+  sentido: Sentido,
+  tipoDeDia: TipoDeDia,
+): Promise<string[]> {
+  const db = obtenerConexion();
+  let horarios: Horario[];
+  try {
+    horarios = (await obtenerHorariosPorParada(paradaId, tipoDeDia)).datos;
+  } catch (error) {
+    const normalizado = normalizarError(error);
+    if (!esSinConexion(normalizado)) throw normalizado;
+    const guardados = await leerEstadoHorariosParada(db, paradaId);
+    horarios = guardados.porTipo[tipoDeDia] ?? [];
+    if (horarios.length === 0) throw normalizado;
+  }
+  return horarios
+    .filter((h) => h.lineaId === lineaId && h.sentido === sentido)
+    .map((h) => h.hora.slice(0, 5))
+    .sort();
+}
