@@ -6,11 +6,12 @@ import {
   useState,
   type ReactNode,
 } from 'react';
-import { useColorScheme, type ColorSchemeName } from 'react-native';
+import { useColorScheme } from 'react-native';
 
 import type { Tema as PreferenciaTema } from '@/tipos/usuario';
 import { leerTexto, guardarTexto } from '@/lib/almacenClaveValor';
 import { CLAVES } from '@/servicios/claves';
+import { esTemaValido, resolverModo } from '@/lib/temaPreferencia';
 import { paletas, type ColoresTema, type ModoTema } from '@/temas/paleta';
 
 type TemaContextoValor = {
@@ -27,26 +28,9 @@ type TemaProviderProps = {
   preferenciaInicial?: PreferenciaTema;
 };
 
-function resolverModo(
-  preferencia: PreferenciaTema,
-  esquemaSistema: ColorSchemeName,
-): ModoTema {
-  if (preferencia === 'oscuro') {
-    return 'oscuro';
-  }
-
-  if (preferencia === 'claro') {
-    return 'claro';
-  }
-
-  return esquemaSistema === 'dark' ? 'oscuro' : 'claro';
-}
-
 function leerPreferenciaInicial(fallback: PreferenciaTema): PreferenciaTema {
   const guardada = leerTexto(CLAVES.tema);
-  if (guardada === 'claro' || guardada === 'oscuro' || guardada === 'sistema') {
-    return guardada;
-  }
+  if (esTemaValido(guardada)) return guardada;
   return fallback;
 }
 

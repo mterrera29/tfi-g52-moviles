@@ -14,6 +14,9 @@ export interface ColoresTema {
   tarjetaAvisoDesvio: string;
   tarjetaAvisoSuspension: string;
   tarjetaAvisoInfo: string;
+  mapaDesvio: string;
+  mapaIda: string;
+  mapaVuelta: string;
 }
 
 export const paletas: Record<ModoTema, ColoresTema> = {
@@ -31,6 +34,9 @@ export const paletas: Record<ModoTema, ColoresTema> = {
     tarjetaAvisoDesvio: '#FFF4E5',
     tarjetaAvisoSuspension: '#FEE4E2',
     tarjetaAvisoInfo: '#E8F4FD',
+    mapaDesvio: '#C2410C',
+    mapaIda: '#1D4ED8',
+    mapaVuelta: '#A21CAF',
   },
   oscuro: {
     fondo: '#12191F',
@@ -46,5 +52,8 @@ export const paletas: Record<ModoTema, ColoresTema> = {
     tarjetaAvisoDesvio: '#3D2E1A',
     tarjetaAvisoSuspension: '#3D2220',
     tarjetaAvisoInfo: '#1A2D3D',
+    mapaDesvio: '#FB923C',
+    mapaIda: '#93C5FD',
+    mapaVuelta: '#F0ABFC',
   },
 };
