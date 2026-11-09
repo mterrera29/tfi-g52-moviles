@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { router } from 'expo-router';
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Linking, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { EstadoError } from '@/componentes/EstadoError';
 import { EstadoVacio } from '@/componentes/EstadoVacio';
@@ -12,7 +12,7 @@ import type { RespuestaError } from '@/tipos/api';
 
 export default function MapaScreen() {
   const { colores, modo } = useTema();
-  const { coordenadas, estado, pedirUbicacion } = useUbicacion();
+  const { coordenadas, estado, bloqueada, pedirUbicacion } = useUbicacion();
   const latitud = coordenadas ? Number(coordenadas.latitud.toFixed(3)) : null;
   const longitud = coordenadas ? Number(coordenadas.longitud.toFixed(3)) : null;
   const { data, isPending, error, refetch } = useQuery<Awaited<ReturnType<typeof consultarParadasCercanas>>, RespuestaError>({
@@ -39,19 +39,23 @@ export default function MapaScreen() {
         </Text>
         {estado === 'negada' && (
           <Text accessibilityRole='alert' style={{ color: colores.error }}>
-            No pudimos obtener tu ubicación. Revisá el permiso de ubicación en los ajustes del teléfono y que el GPS esté encendido, o buscá por nombre.
+            No pudimos obtener tu ubicación. {bloqueada ? 'El permiso de ubicación quedó bloqueado: activalo desde Ajustes del teléfono, o buscá por nombre.' : 'Revisá que el GPS esté encendido y permití la ubicación, o buscá por nombre.'}
           </Text>
         )}
         <Pressable
           accessibilityRole='button'
-          accessibilityLabel={estado === 'negada' ? 'Permitir ubicación' : 'Ver paradas cerca de mí'}
+          accessibilityLabel={bloqueada ? 'Abrir los ajustes del teléfono' : estado === 'negada' ? 'Permitir ubicación' : 'Ver paradas cerca de mí'}
           accessibilityState={{ disabled: estado === 'pidiendo' }}
           disabled={estado === 'pidiendo'}
-          onPress={() => { void pedirUbicacion(); }}
+          onPress={() => {
+            // Con el permiso bloqueado el cartel no vuelve a salir: hay que ir a Ajustes.
+            if (bloqueada) void Linking.openSettings();
+            else void pedirUbicacion();
+          }}
           style={({ pressed }) => [estilos.boton, { backgroundColor: colores.acento, opacity: pressed || estado === 'pidiendo' ? 0.7 : 1 }]}
         >
           <Text style={[estilos.textoBoton, { color: colores.acentoTexto }]}>
-            {estado === 'pidiendo' ? 'Obteniendo ubicación...' : estado === 'negada' ? 'Permitir ubicación' : 'Ver paradas cerca de mí'}
+            {estado === 'pidiendo' ? 'Obteniendo ubicación...' : bloqueada ? 'Abrir Ajustes' : estado === 'negada' ? 'Permitir ubicación' : 'Ver paradas cerca de mí'}
           </Text>
         </Pressable>
         <Pressable accessibilityRole='button' accessibilityLabel='Buscar la parada por nombre' onPress={() => router.replace('/paradas')} style={estilos.boton}>

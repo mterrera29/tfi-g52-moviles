@@ -25,6 +25,7 @@ export function FlechaParada({
     rotacion,
     distancia,
     enLaParada,
+    senales,
     avisos,
     orientar,
     detener,
@@ -76,7 +77,14 @@ export function FlechaParada({
       {buscando ? (
         <View style={estilos.filaEstado} accessibilityLiveRegion='polite'>
           <ActivityIndicator color={colores.acento} accessibilityLabel='Orientando hacia la parada' />
-          <Text style={{ color: colores.textoSecundario }}>Buscando posición y brújula…</Text>
+          <View>
+            <Text style={{ color: colores.textoSecundario }}>
+              Ubicación (GPS): {senales.gps ? 'lista' : 'buscando…'}
+            </Text>
+            <Text style={{ color: colores.textoSecundario }}>
+              Brújula: {senales.brujula ? 'lista' : 'sin datos todavía'}
+            </Text>
+          </View>
         </View>
       ) : null}
 

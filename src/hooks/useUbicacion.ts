@@ -7,6 +7,8 @@ type EstadoUbicacion = 'sin-pedir' | 'pidiendo' | 'concedida' | 'negada';
 export function useUbicacion() {
   const [coordenadas, setCoordenadas] = useState<Coordenadas | null>(null);
   const [estado, setEstado] = useState<EstadoUbicacion>('sin-pedir');
+  // Si es true, el sistema ya no vuelve a mostrar el cartel: solo se arregla desde Ajustes.
+  const [bloqueada, setBloqueada] = useState(false);
   const pidiendo = useRef(false);
 
   async function pedirUbicacion() {
@@ -14,8 +16,9 @@ export function useUbicacion() {
     pidiendo.current = true;
     setEstado('pidiendo');
     try {
-      const { status } = await Location.requestForegroundPermissionsAsync();
+      const { status, canAskAgain } = await Location.requestForegroundPermissionsAsync();
       if (status !== 'granted') {
+        setBloqueada(!canAskAgain);
         setCoordenadas(null);
         setEstado('negada');
         return;
@@ -37,5 +40,5 @@ export function useUbicacion() {
     }
   }
 
-  return { coordenadas, estado, pedirUbicacion };
+  return { coordenadas, estado, bloqueada, pedirUbicacion };
 }
