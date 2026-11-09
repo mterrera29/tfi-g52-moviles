@@ -258,7 +258,12 @@ export function useOrientacionParada(destino: Coordenadas | null, paradaId: stri
         return;
       }
 
-      const permisoUbicacion = await Location.requestForegroundPermissionsAsync();
+      // Primero se mira el estado: pedir de nuevo con el permiso ya dado pausa la app un instante y
+      // eso reiniciaba la orientación una y otra vez.
+      let permisoUbicacion = await Location.getForegroundPermissionsAsync();
+      if (permisoUbicacion.status !== 'granted') {
+        permisoUbicacion = await Location.requestForegroundPermissionsAsync();
+      }
       if (!vigente()) return;
       if (permisoUbicacion.status !== 'granted') {
         setError(MENSAJE_PERMISO_UBICACION);
@@ -266,7 +271,10 @@ export function useOrientacionParada(destino: Coordenadas | null, paradaId: stri
         return;
       }
 
-      const permisoSensor = await Magnetometer.requestPermissionsAsync();
+      let permisoSensor = await Magnetometer.getPermissionsAsync();
+      if (!permisoSensor.granted) {
+        permisoSensor = await Magnetometer.requestPermissionsAsync();
+      }
       if (!vigente()) return;
       if (!permisoSensor.granted) {
         setError(MENSAJE_PERMISO_SENSOR);
