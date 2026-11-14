@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { router } from 'expo-router';
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 
+import { EstadoError } from '@/componentes/EstadoError';
 import { useSesion } from '@/contextos/sesion';
 import { useTema } from '@/contextos/tema';
 import { confirmarReporte, consultarReportesParada } from '@/servicios/reportes';
@@ -30,7 +31,7 @@ export function ReportesParada({ paradaId, lineas }: { paradaId: string; lineas:
   const queryClient = useQueryClient();
   const clave = ['reportes', paradaId];
 
-  const { data, isPending, error } = useQuery({
+  const { data, isPending, error, refetch } = useQuery({
     queryKey: clave,
     queryFn: () => consultarReportesParada(paradaId),
   });
@@ -51,9 +52,11 @@ export function ReportesParada({ paradaId, lineas }: { paradaId: string; lineas:
       {isPending ? (
         <ActivityIndicator color={colores.acento} accessibilityLabel='Cargando reportes' />
       ) : error ? (
-        <Text style={{ color: colores.textoSecundario }}>
-          No pudimos cargar los reportes. Necesitan conexión a internet.
-        </Text>
+        // mismo patrón que el resto: el error siempre tiene una salida (U05.T01 diap. 7)
+        <EstadoError
+          mensaje='No pudimos cargar los reportes. Necesitan conexión a internet.'
+          onReintentar={() => { void refetch(); }}
+        />
       ) : data.length === 0 ? (
         <Text style={{ color: colores.textoSecundario }}>
           Nadie reportó demoras en esta parada en la última hora y media.

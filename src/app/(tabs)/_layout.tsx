@@ -2,9 +2,11 @@ import { Tabs } from 'expo-router';
 import Ionicons from '@react-native-vector-icons/ionicons';
 
 import { useTema } from '@/contextos/tema';
+import { useSinConexion } from '@/hooks/useSinConexion';
 
 export default function TabsLayout() {
   const { colores } = useTema();
+  const sinConexion = useSinConexion();
 
   return (
     <Tabs
@@ -13,6 +15,8 @@ export default function TabsLayout() {
         headerStyle: { backgroundColor: colores.headerFondo },
         headerTintColor: colores.headerTexto,
         headerTitleStyle: { fontWeight: '700' },
+        // Sin conexión, el aviso ya ocupa la barra de estado.
+        ...(sinConexion ? { headerStatusBarHeight: 0 } : {}),
         tabBarActiveTintColor: colores.acento,
         tabBarInactiveTintColor: colores.textoSecundario,
         tabBarStyle: {
