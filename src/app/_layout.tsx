@@ -1,6 +1,6 @@
 import { SQLiteProvider } from 'expo-sqlite';
 import { focusManager, QueryClientProvider } from '@tanstack/react-query';
-import { SplashScreen, Stack } from 'expo-router';
+import { SplashScreen, Stack, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, useRef } from 'react';
 import { AppState, Platform, type AppStateStatus } from 'react-native';
@@ -16,6 +16,7 @@ import { TemaProvider, useTema } from '@/contextos/tema';
 import { useAvisosFavoritos } from '@/hooks/useAvisosFavoritos';
 import { useDrenajeReportes } from '@/hooks/useDrenajeReportes';
 import { useRespuestaNotificaciones } from '@/hooks/useRespuestaNotificaciones';
+import { useSincronizacionCompleta } from '@/hooks/useSincronizacionCompleta';
 import { queryClient } from '@/servicios/queryClient';
 import '@/servicios/notificaciones';
 
@@ -28,6 +29,12 @@ function NavegacionConTema() {
   useDrenajeReportes();
   useAvisosFavoritos();
   useRespuestaNotificaciones();
+  useSincronizacionCompleta();
+  const segmentos = useSegments();
+  // El header nativo de Android siempre suma la barra de estado (react-native-screens, edge-to-edge),
+  // así que el aviso va arriba de todo solo en pantallas sin header de pila (inicio y pestañas);
+  // en las demás va debajo del header, con screenLayout.
+  const avisoArriba = bloqueada || !segmentos[0] || segmentos[0] === '(tabs)';
 
   useEffect(() => {
     if (restaurando) return;
@@ -61,11 +68,17 @@ function NavegacionConTema() {
   return (
     <>
       <StatusBar style={modo === 'oscuro' ? 'light' : 'dark'} />
-      <AvisoSinConexion />
+      {avisoArriba ? <AvisoSinConexion /> : null}
       {bloqueada ? (
         <PantallaBloqueo />
       ) : (
         <Stack
+          screenLayout={({ children, options }) => (
+            <>
+              {options.headerShown !== false ? <AvisoSinConexion ocupaBarraDeEstado={false} /> : null}
+              {children}
+            </>
+          )}
           screenOptions={{
             headerStyle: { backgroundColor: colores.headerFondo },
             headerTintColor: colores.headerTexto,

@@ -228,6 +228,9 @@ export async function consultarLineaDetalle(lineaId: string): Promise<LineaDetal
         paradas: await leerParadasPorIds(db, recorrido.paradaIds),
       })),
     );
+    // Si la línea solo vino del listado y nunca se abrió con conexión, no hay paradas guardadas:
+    // mejor mostrar el error de sin conexión (con Reintentar) que una pantalla vacía.
+    if (!recorridos.some((recorrido) => recorrido.paradas.length > 0)) throw normalizado;
 
     const avisos = (await leerAvisos(db)).filter(
       (aviso) => aviso.lineaIds.includes(lineaId) && avisoVigente(aviso),
