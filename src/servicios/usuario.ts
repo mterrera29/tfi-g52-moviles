@@ -1,3 +1,5 @@
+import { borrarClave, guardarJson, leerJson } from '@/lib/almacenClaveValor';
+import { CLAVES } from '@/servicios/claves';
 import { cliente, normalizarError } from '@/servicios/cliente';
 import type { RespuestaError, RespuestaUno } from '@/tipos/api';
 import type { Usuario } from '@/tipos/usuario';
@@ -6,10 +8,22 @@ export async function obtenerUsuario(): Promise<RespuestaUno<Usuario> | Respuest
   try {
     // El mapper de la API devuelve exactamente los campos de Usuario del PRD.
     const respuesta = await cliente.get<RespuestaUno<Usuario>>('/yo');
+    // copia local del perfil y los favoritos para usar sin datos (PRD: persistencia de favoritos).
+    // No es un dato sensible: va en kv-store; el token sigue en SecureStore.
+    guardarJson(CLAVES.perfil, respuesta.data);
     return respuesta.data;
   } catch (error: unknown) {
-    return normalizarError(error);
+    const normalizado = normalizarError(error);
+    if (normalizado.error.codigo === 'SIN_CONEXION') {
+      const guardado = leerJson<RespuestaUno<Usuario>>(CLAVES.perfil);
+      if (guardado) return guardado;
+    }
+    return normalizado;
   }
+}
+
+export function borrarPerfilGuardado(): void {
+  borrarClave(CLAVES.perfil);
 }
 
 export async function agregarLineaFavorita(lineaId: string): Promise<RespuestaUno<Usuario>> {

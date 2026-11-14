@@ -5,4 +5,5 @@ export const CLAVES = {
   ultimaSincronizacionCompleta: 'consulta.ultimaSincronizacionCompleta',
   recordatoriosProgramados: 'notificaciones.recordatorios',
   avisosVistos: 'notificaciones.avisosVistos',
+  perfil: 'usuario.perfil',
 } as const;

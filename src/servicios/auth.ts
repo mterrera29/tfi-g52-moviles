@@ -1,7 +1,7 @@
 import type { DatosLogin, DatosRegistro } from '@/esquemas/auth';
 import { cliente, establecerToken, normalizarError } from '@/servicios/cliente';
 import { borrarToken, guardarToken, leerToken } from '@/servicios/token';
-import { obtenerUsuario } from '@/servicios/usuario';
+import { borrarPerfilGuardado, obtenerUsuario } from '@/servicios/usuario';
 import type { RespuestaError, RespuestaUno, Sesion } from '@/tipos/api';
 
 export async function iniciarSesion(datos: DatosLogin): Promise<Sesion | RespuestaError> {
@@ -34,6 +34,8 @@ export async function registrar(datos: DatosRegistro): Promise<Sesion | Respuest
 export async function cerrarSesion(): Promise<RespuestaError | null> {
   try {
     await borrarToken();
+    // al salir no queda el perfil de esta cuenta guardado en el teléfono
+    borrarPerfilGuardado();
     return null;
   } catch (error: unknown) {
     return normalizarError(error);
@@ -50,7 +52,10 @@ export async function obtenerSesion(): Promise<Sesion | RespuestaError | null> {
     if ('error' in respuesta) {
       establecerToken(null);
       // Un problema de conexión no invalida el token guardado.
-      if (respuesta.error.codigo === 'NO_AUTENTICADO') await borrarToken();
+      if (respuesta.error.codigo === 'NO_AUTENTICADO') {
+        await borrarToken();
+        borrarPerfilGuardado();
+      }
       return respuesta;
     }
     return { token, usuario: respuesta.datos };
