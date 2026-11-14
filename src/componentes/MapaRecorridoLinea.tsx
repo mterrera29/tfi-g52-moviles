@@ -4,6 +4,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { Mapa } from '@/componentes/Mapa';
 import { LeyendaMapaLinea } from '@/componentes/LeyendaMapaLinea';
 import { useTema } from '@/contextos/tema';
+import { useSinConexion } from '@/hooks/useSinConexion';
 import type { TrazadoAlternativoMapa } from '@/lib/trazadoAlternativo';
 import type { Recorrido } from '@/tipos/linea';
 import type { Parada } from '@/tipos/parada';
@@ -37,6 +38,8 @@ export function MapaRecorridoLinea({
 }: PropsMapaRecorridoLinea) {
   const { colores, modo } = useTema();
   const hayDesvio = trazadosAlternativos.length > 0;
+  // sin internet Mapa suma un cartel abajo: subimos la leyenda para que no lo tape
+  const sinConexion = useSinConexion();
 
   return (
     <View style={compacto ? estilos.compacto : estilos.completo}>
@@ -51,7 +54,7 @@ export function MapaRecorridoLinea({
         estiloInterfaz={modo === 'oscuro' ? 'dark' : 'light'}
         descripcion={descripcionMapaLinea(numeroLinea, hayDesvio)}
       />
-      <View pointerEvents='box-none' style={estilos.leyenda}>
+      <View pointerEvents='box-none' style={[estilos.leyenda, sinConexion ? { bottom: 72 } : null]}>
         <LeyendaMapaLinea
           colorIda={colores.mapaIda}
           colorVuelta={colores.mapaVuelta}

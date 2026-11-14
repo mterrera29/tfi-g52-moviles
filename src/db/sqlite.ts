@@ -66,6 +66,26 @@ export async function persistirHorariosParada(
   );
 }
 
+/**
+ * Guarda de una sola vez las tablas de horarios de muchas paradas (sincronización completa).
+ * Transacción exclusiva para que no se mezcle con otras escrituras que estén corriendo.
+ */
+export async function persistirTablasHorarios(
+  db: SQLiteDatabase,
+  tablas: Array<{ paradaId: string; tipoDeDia: TipoDeDia; horarios: Horario[] }>,
+): Promise<void> {
+  await db.withExclusiveTransactionAsync(async (txn) => {
+    for (const tabla of tablas) {
+      await txn.runAsync(
+        'INSERT OR REPLACE INTO horarios (parada_id, tipo_de_dia, datos) VALUES (?, ?, ?)',
+        tabla.paradaId,
+        tabla.tipoDeDia,
+        JSON.stringify(tabla.horarios),
+      );
+    }
+  });
+}
+
 export async function persistirFeriados(db: SQLiteDatabase, feriados: Feriado[]): Promise<void> {
   await db.withTransactionAsync(async () => {
     for (const feriado of feriados) {
